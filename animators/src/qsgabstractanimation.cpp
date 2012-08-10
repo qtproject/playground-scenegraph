@@ -39,80 +39,90 @@
 **
 ****************************************************************************/
 
-#ifndef WINDOWMANAGER_H
-#define WINDOWMANAGER_H
 
-#include <QtCore/QThread>
-#include <QtGui/QOpenGLContext>
-#include <private/qsgcontext_p.h>
+#include "qsgabstractanimation.h"
 
-#include <private/qquickwindowmanager_p.h>
-
-class RenderThread;
-
-class WindowManager : public QObject, public QQuickWindowManager
+QSGAbstractAnimation::QSGAbstractAnimation(QQuickItem *parent)
+  : QQuickItem(parent)
+  , m_running(false)
+  , m_paused(false)
+  , m_alwaysRunToEnd(false)
+  , m_loops(1)
+  , m_target(0)
 {
-    Q_OBJECT
-public:
-    WindowManager();
+}
 
-    void show(QQuickWindow *window);
-    void hide(QQuickWindow *window);
+QObject* QSGAbstractAnimation::target()
+{
+    return m_target;
+}
 
-    void windowDestroyed(QQuickWindow *window);
-    void exposureChanged(QQuickWindow *window);
+void QSGAbstractAnimation::setTarget(QObject* a)
+{
+    if (m_target != a) {
+        m_target = a;
+        emit targetChanged();
+    }
+}
 
-    void handleExposure(QQuickWindow *window);
-    void handleObscurity(QQuickWindow *window);
+int QSGAbstractAnimation::loops()
+{
+    return m_loops;
+}
 
-    QImage grab(QQuickWindow *);
+void QSGAbstractAnimation::setLoops(int a)
+{
+    if (m_loops != a) {
+        m_loops = a;
+        emit loopCountChanged(m_loops);
+    }
+}
 
-    void resize(QQuickWindow *, const QSize &) { }
+bool QSGAbstractAnimation::isRunning()
+{
+    return m_running;
+}
 
-    void update(QQuickWindow *window);
-    void maybeUpdate(QQuickWindow *window);
-    volatile bool *allowMainThreadProcessing();
-    QSGContext *sceneGraphContext() const;
+void QSGAbstractAnimation::setRunning(bool a)
+{
+    if (m_running != a) {
+        m_running = a;
+        emit runningChanged(m_running);
+    }
+}
 
-    void releaseResources();
+bool QSGAbstractAnimation::isPaused()
+{
+    return m_paused;
+}
 
-    bool event(QEvent *);
+void QSGAbstractAnimation::setPaused(bool a)
+{
+    if (m_paused != a) {
+        m_paused = a;
+        emit pausedChanged(m_paused);
+    }
+}
 
-    void wakeup();
+bool QSGAbstractAnimation::alwaysRunToEnd()
+{
+    return m_alwaysRunToEnd;
+}
 
-public slots:
-    void animationStarted();
-    void animationStopped();
+void QSGAbstractAnimation::setAlwaysRunToEnd(bool a)
+{
+    if (m_alwaysRunToEnd != a) {
+        m_alwaysRunToEnd = a;
+        emit alwaysRunToEndChanged(m_alwaysRunToEnd);
+    }
+}
 
-private:
-    friend class RenderThread;
+void QSGAbstractAnimation::complete()
+{
+    emit completed();
+    setRunning(false);
+}
 
-    bool checkAndResetForceUpdate(QQuickWindow *window);
-
-    bool anyoneShowing();
-    void initialize();
-
-    void waitForReleaseComplete();
-    void replayDelayedEvents();
-
-    struct Window {
-        QQuickWindow *window;
-        uint pendingUpdate : 1;
-        uint pendingExpose : 1;
-        uint pendingForceUpdate : 1;
-    };
-
-    RenderThread *m_thread;
-    QAnimationDriver *m_animation_driver;
-    QList<Window> m_windows;
-
-    QHash<QQuickWindow *, QImage> m_grab_results;
-
-    uint renderPassScheduled : 1;
-    uint renderPassDone : 1;
-
-    int m_animation_timer;
-    int m_releases_requested;
-};
-
-#endif // WINDOWMANAGER_H
+void QSGAbstractAnimation::prepare(bool)
+{
+}

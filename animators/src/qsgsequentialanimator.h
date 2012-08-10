@@ -39,80 +39,22 @@
 **
 ****************************************************************************/
 
-#ifndef WINDOWMANAGER_H
-#define WINDOWMANAGER_H
 
-#include <QtCore/QThread>
-#include <QtGui/QOpenGLContext>
-#include <private/qsgcontext_p.h>
+#ifndef QSGSEQUENTIALANIMATOR_H
+#define QSGSEQUENTIALANIMATOR_H
 
-#include <private/qquickwindowmanager_p.h>
+#include "qsgabstractanimator.h"
 
-class RenderThread;
+class QSGPropertyController;
+class QSGAbstractAnimation;
 
-class WindowManager : public QObject, public QQuickWindowManager
+class QSGSequentialAnimator : public QSGAbstractAnimator
 {
-    Q_OBJECT
 public:
-    WindowManager();
+    QSGSequentialAnimator(QSGAnimatorController *, QSGAbstractAnimator *, QSGAbstractAnimation *, qreal);
 
-    void show(QQuickWindow *window);
-    void hide(QQuickWindow *window);
-
-    void windowDestroyed(QQuickWindow *window);
-    void exposureChanged(QQuickWindow *window);
-
-    void handleExposure(QQuickWindow *window);
-    void handleObscurity(QQuickWindow *window);
-
-    QImage grab(QQuickWindow *);
-
-    void resize(QQuickWindow *, const QSize &) { }
-
-    void update(QQuickWindow *window);
-    void maybeUpdate(QQuickWindow *window);
-    volatile bool *allowMainThreadProcessing();
-    QSGContext *sceneGraphContext() const;
-
-    void releaseResources();
-
-    bool event(QEvent *);
-
-    void wakeup();
-
-public slots:
-    void animationStarted();
-    void animationStopped();
-
-private:
-    friend class RenderThread;
-
-    bool checkAndResetForceUpdate(QQuickWindow *window);
-
-    bool anyoneShowing();
-    void initialize();
-
-    void waitForReleaseComplete();
-    void replayDelayedEvents();
-
-    struct Window {
-        QQuickWindow *window;
-        uint pendingUpdate : 1;
-        uint pendingExpose : 1;
-        uint pendingForceUpdate : 1;
-    };
-
-    RenderThread *m_thread;
-    QAnimationDriver *m_animation_driver;
-    QList<Window> m_windows;
-
-    QHash<QQuickWindow *, QImage> m_grab_results;
-
-    uint renderPassScheduled : 1;
-    uint renderPassDone : 1;
-
-    int m_animation_timer;
-    int m_releases_requested;
+    virtual void advance(qreal);
+    virtual qreal sync(bool, qreal startTime = 0.0);
 };
 
-#endif // WINDOWMANAGER_H
+#endif // QSGSEQUENTIALANIMATOR_H

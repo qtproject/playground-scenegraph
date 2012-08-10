@@ -36,3 +36,4 @@ arm_build {
     DEFINES += DESKTOP_BUILD
 }
 
+verbose:DEFINES+=CUSTOMCONTEXT_DEBUG

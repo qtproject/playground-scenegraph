@@ -39,80 +39,39 @@
 **
 ****************************************************************************/
 
-#ifndef WINDOWMANAGER_H
-#define WINDOWMANAGER_H
 
-#include <QtCore/QThread>
-#include <QtGui/QOpenGLContext>
-#include <private/qsgcontext_p.h>
+#include "qsganimatoritem.h"
+#include "qsganimatorcontroller.h"
+#include "qsganimatornode.h"
+#include <QtQuick/QQuickItem>
+#include <QDebug>
 
-#include <private/qquickwindowmanager_p.h>
-
-class RenderThread;
-
-class WindowManager : public QObject, public QQuickWindowManager
+QSGAnimatorItem::QSGAnimatorItem(QQuickItem *parent)
+    : QQuickItem(parent)
+    , m_animatorNode(0)
 {
-    Q_OBJECT
-public:
-    WindowManager();
+    setFlag(ItemHasContents);
+}
 
-    void show(QQuickWindow *window);
-    void hide(QQuickWindow *window);
+QSGAnimatorItem::~QSGAnimatorItem()
+{
+}
 
-    void windowDestroyed(QQuickWindow *window);
-    void exposureChanged(QQuickWindow *window);
+QSGNode *QSGAnimatorItem::updatePaintNode(QSGNode *node, UpdatePaintNodeData *)
+{
+    QSGTransformNode *transformNode = static_cast<QSGTransformNode*>(QQuickItemPrivate::get(this)->itemNode());
+    QSGOpacityNode *opacityNode = static_cast<QSGOpacityNode*>(QQuickItemPrivate::get(this)->opacityNode());
 
-    void handleExposure(QQuickWindow *window);
-    void handleObscurity(QQuickWindow *window);
+    if (!node) {
+        m_animatorNode = new QSGAnimatorNode(this);
+        m_animatorNode->setFlag(QSGNode::UsePreprocess, true);
+    }
 
-    QImage grab(QQuickWindow *);
+    if (m_animatorNode) {
+        m_animatorNode->controller().sync();
+        m_animatorNode->setTransformNode(transformNode);
+        m_animatorNode->setOpacityNode(opacityNode);
+    }
 
-    void resize(QQuickWindow *, const QSize &) { }
-
-    void update(QQuickWindow *window);
-    void maybeUpdate(QQuickWindow *window);
-    volatile bool *allowMainThreadProcessing();
-    QSGContext *sceneGraphContext() const;
-
-    void releaseResources();
-
-    bool event(QEvent *);
-
-    void wakeup();
-
-public slots:
-    void animationStarted();
-    void animationStopped();
-
-private:
-    friend class RenderThread;
-
-    bool checkAndResetForceUpdate(QQuickWindow *window);
-
-    bool anyoneShowing();
-    void initialize();
-
-    void waitForReleaseComplete();
-    void replayDelayedEvents();
-
-    struct Window {
-        QQuickWindow *window;
-        uint pendingUpdate : 1;
-        uint pendingExpose : 1;
-        uint pendingForceUpdate : 1;
-    };
-
-    RenderThread *m_thread;
-    QAnimationDriver *m_animation_driver;
-    QList<Window> m_windows;
-
-    QHash<QQuickWindow *, QImage> m_grab_results;
-
-    uint renderPassScheduled : 1;
-    uint renderPassDone : 1;
-
-    int m_animation_timer;
-    int m_releases_requested;
-};
-
-#endif // WINDOWMANAGER_H
+    return m_animatorNode;
+}

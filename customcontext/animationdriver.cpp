@@ -88,7 +88,7 @@ void AnimationDriver::maybeUpdateDelta()
 
 qint64 AnimationDriver::elapsed() const
 {
-    if (WindowManager::fakeRendering || !isRunning() || m_stable_vsync < -1)
+    if (!isRunning() || m_stable_vsync < -1)
         return startTime() + m_timer.elapsed();
     else
         return startTime() + m_current_animation_time;
@@ -108,7 +108,7 @@ void AnimationDriver::advance()
 {
     maybeUpdateDelta();
 
-    if (WindowManager::fakeRendering || m_stable_vsync < 0) {
+    if (m_stable_vsync < 0) {
         m_current_animation_time = m_timer.elapsed();
     } else {
 

@@ -39,80 +39,33 @@
 **
 ****************************************************************************/
 
-#ifndef WINDOWMANAGER_H
-#define WINDOWMANAGER_H
 
-#include <QtCore/QThread>
-#include <QtGui/QOpenGLContext>
-#include <private/qsgcontext_p.h>
+#include "qsgvector3danimation.h"
+#include "qsgpropertyanimation.h"
 
-#include <private/qquickwindowmanager_p.h>
-
-class RenderThread;
-
-class WindowManager : public QObject, public QQuickWindowManager
+QSGVector3DAnimation::QSGVector3DAnimation(QQuickItem *parent)
+    : QSGPropertyAnimation(parent)
 {
-    Q_OBJECT
-public:
-    WindowManager();
+}
 
-    void show(QQuickWindow *window);
-    void hide(QQuickWindow *window);
+QVector3D QSGVector3DAnimation::from()
+{
+    return qvariant_cast<QVector3D>(QSGPropertyAnimation::from());
+}
 
-    void windowDestroyed(QQuickWindow *window);
-    void exposureChanged(QQuickWindow *window);
+void QSGVector3DAnimation::setFrom(QVector3D a)
+{
+    QSGPropertyAnimation::setFrom(a);
+}
 
-    void handleExposure(QQuickWindow *window);
-    void handleObscurity(QQuickWindow *window);
+QVector3D QSGVector3DAnimation::to()
+{
+    return qvariant_cast<QVector3D>(QSGPropertyAnimation::to());
+}
 
-    QImage grab(QQuickWindow *);
+void QSGVector3DAnimation::setTo(QVector3D a)
+{
+    QSGPropertyAnimation::setTo(a);
+}
 
-    void resize(QQuickWindow *, const QSize &) { }
 
-    void update(QQuickWindow *window);
-    void maybeUpdate(QQuickWindow *window);
-    volatile bool *allowMainThreadProcessing();
-    QSGContext *sceneGraphContext() const;
-
-    void releaseResources();
-
-    bool event(QEvent *);
-
-    void wakeup();
-
-public slots:
-    void animationStarted();
-    void animationStopped();
-
-private:
-    friend class RenderThread;
-
-    bool checkAndResetForceUpdate(QQuickWindow *window);
-
-    bool anyoneShowing();
-    void initialize();
-
-    void waitForReleaseComplete();
-    void replayDelayedEvents();
-
-    struct Window {
-        QQuickWindow *window;
-        uint pendingUpdate : 1;
-        uint pendingExpose : 1;
-        uint pendingForceUpdate : 1;
-    };
-
-    RenderThread *m_thread;
-    QAnimationDriver *m_animation_driver;
-    QList<Window> m_windows;
-
-    QHash<QQuickWindow *, QImage> m_grab_results;
-
-    uint renderPassScheduled : 1;
-    uint renderPassDone : 1;
-
-    int m_animation_timer;
-    int m_releases_requested;
-};
-
-#endif // WINDOWMANAGER_H

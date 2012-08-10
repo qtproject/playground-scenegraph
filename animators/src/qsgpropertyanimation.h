@@ -39,80 +39,69 @@
 **
 ****************************************************************************/
 
-#ifndef WINDOWMANAGER_H
-#define WINDOWMANAGER_H
 
-#include <QtCore/QThread>
-#include <QtGui/QOpenGLContext>
-#include <private/qsgcontext_p.h>
+#ifndef QSGPROPERTYANIMATION_H
+#define QSGPROPERTYANIMATION_H
 
-#include <private/qquickwindowmanager_p.h>
+#include "qsgabstractanimation.h"
 
-class RenderThread;
-
-class WindowManager : public QObject, public QQuickWindowManager
+class QSGPropertyAnimation : public QSGAbstractAnimation
 {
     Q_OBJECT
+    Q_PROPERTY(int duration READ duration WRITE setDuration NOTIFY durationChanged)
+    Q_PROPERTY(QVariant from READ from WRITE setFrom NOTIFY fromChanged)
+    Q_PROPERTY(QVariant to READ to WRITE setTo NOTIFY toChanged)
+    Q_PROPERTY(QEasingCurve easing READ easing WRITE setEasing NOTIFY easingChanged)
+    Q_PROPERTY(QObject* target READ target WRITE setTarget NOTIFY targetChanged)
+    Q_PROPERTY(QString property READ property WRITE setProperty NOTIFY propertyChanged)
+    Q_PROPERTY(QString properties READ properties WRITE setProperties NOTIFY propertiesChanged)
+
 public:
-    WindowManager();
+    QSGPropertyAnimation(QQuickItem *parent = 0);
 
-    void show(QQuickWindow *window);
-    void hide(QQuickWindow *window);
+    int duration();
+    void setDuration(int);
 
-    void windowDestroyed(QQuickWindow *window);
-    void exposureChanged(QQuickWindow *window);
+    QVariant from();
+    void setFrom(QVariant);
 
-    void handleExposure(QQuickWindow *window);
-    void handleObscurity(QQuickWindow *window);
+    QVariant to();
+    void setTo(QVariant);
 
-    QImage grab(QQuickWindow *);
+    const QEasingCurve& easing();
+    void setEasing(const QEasingCurve&);
 
-    void resize(QQuickWindow *, const QSize &) { }
+    QObject* target();
+    void setTarget(QObject *);
 
-    void update(QQuickWindow *window);
-    void maybeUpdate(QQuickWindow *window);
-    volatile bool *allowMainThreadProcessing();
-    QSGContext *sceneGraphContext() const;
+    const QString& property();
+    void setProperty(QString);
 
-    void releaseResources();
+    const QString& properties();
+    void setProperties(QString);
 
-    bool event(QEvent *);
+public Q_SLOTS:
+    virtual void complete();
+    virtual void prepare(bool);
 
-    void wakeup();
-
-public slots:
-    void animationStarted();
-    void animationStopped();
+Q_SIGNALS:
+    void durationChanged(int);
+    void fromChanged(QVariant);
+    void toChanged(QVariant);
+    void easingChanged(const QEasingCurve &);
+    void targetChanged();
+    void propertyChanged();
+    void propertiesChanged();
 
 private:
-    friend class RenderThread;
-
-    bool checkAndResetForceUpdate(QQuickWindow *window);
-
-    bool anyoneShowing();
-    void initialize();
-
-    void waitForReleaseComplete();
-    void replayDelayedEvents();
-
-    struct Window {
-        QQuickWindow *window;
-        uint pendingUpdate : 1;
-        uint pendingExpose : 1;
-        uint pendingForceUpdate : 1;
-    };
-
-    RenderThread *m_thread;
-    QAnimationDriver *m_animation_driver;
-    QList<Window> m_windows;
-
-    QHash<QQuickWindow *, QImage> m_grab_results;
-
-    uint renderPassScheduled : 1;
-    uint renderPassDone : 1;
-
-    int m_animation_timer;
-    int m_releases_requested;
+    int m_duration;
+    QVariant m_from;
+    QVariant m_to;
+    QEasingCurve m_easing;
+    QObject *m_target;
+    QString m_property;
+    QString m_properties;
+    Q_DISABLE_COPY(QSGPropertyAnimation)
 };
 
-#endif // WINDOWMANAGER_H
+#endif // QSGPROPERTYANIMATION_H

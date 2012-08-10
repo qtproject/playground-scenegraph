@@ -39,80 +39,34 @@
 **
 ****************************************************************************/
 
-#ifndef WINDOWMANAGER_H
-#define WINDOWMANAGER_H
 
-#include <QtCore/QThread>
-#include <QtGui/QOpenGLContext>
-#include <private/qsgcontext_p.h>
+#include "qsgtoplevelanimator.h"
+#include "qsganimatorcontroller.h"
+#include <QDebug>
 
-#include <private/qquickwindowmanager_p.h>
-
-class RenderThread;
-
-class WindowManager : public QObject, public QQuickWindowManager
+QSGTopLevelAnimator::QSGTopLevelAnimator()
+    : QSGAbstractAnimator(0, 0, 0, 0)
 {
-    Q_OBJECT
-public:
-    WindowManager();
+}
 
-    void show(QQuickWindow *window);
-    void hide(QQuickWindow *window);
+void QSGTopLevelAnimator::advance(qreal t)
+{
+    QSGAbstractAnimator::advance(t);
 
-    void windowDestroyed(QQuickWindow *window);
-    void exposureChanged(QQuickWindow *window);
+    for (int i = 0; i < m_animators.count(); i++) {
+        m_animators.at(i)->advance(t);
+    }
+}
 
-    void handleExposure(QQuickWindow *window);
-    void handleObscurity(QQuickWindow *window);
+qreal QSGTopLevelAnimator::sync(bool topLevelRunning, qreal startTime)
+{
+    QSGAbstractAnimator::sync(topLevelRunning, startTime);
 
-    QImage grab(QQuickWindow *);
-
-    void resize(QQuickWindow *, const QSize &) { }
-
-    void update(QQuickWindow *window);
-    void maybeUpdate(QQuickWindow *window);
-    volatile bool *allowMainThreadProcessing();
-    QSGContext *sceneGraphContext() const;
-
-    void releaseResources();
-
-    bool event(QEvent *);
-
-    void wakeup();
-
-public slots:
-    void animationStarted();
-    void animationStopped();
-
-private:
-    friend class RenderThread;
-
-    bool checkAndResetForceUpdate(QQuickWindow *window);
-
-    bool anyoneShowing();
-    void initialize();
-
-    void waitForReleaseComplete();
-    void replayDelayedEvents();
-
-    struct Window {
-        QQuickWindow *window;
-        uint pendingUpdate : 1;
-        uint pendingExpose : 1;
-        uint pendingForceUpdate : 1;
-    };
-
-    RenderThread *m_thread;
-    QAnimationDriver *m_animation_driver;
-    QList<Window> m_windows;
-
-    QHash<QQuickWindow *, QImage> m_grab_results;
-
-    uint renderPassScheduled : 1;
-    uint renderPassDone : 1;
-
-    int m_animation_timer;
-    int m_releases_requested;
-};
-
-#endif // WINDOWMANAGER_H
+    qreal duration = 0.0;
+    for (int i = 0; i < m_animators.count(); i++) {
+        qreal childAnimationDuration = m_animators.at(i)->sync(topLevelRunning, startTime);
+        duration = qMax(duration, childAnimationDuration);
+    }
+    duration *= m_loops;
+    return duration;
+}

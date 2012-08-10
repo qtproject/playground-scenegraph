@@ -39,80 +39,29 @@
 **
 ****************************************************************************/
 
-#ifndef WINDOWMANAGER_H
-#define WINDOWMANAGER_H
+#ifndef QSGNUMBERANIMATION_H
+#define QSGNUMBERANIMATION_H
 
-#include <QtCore/QThread>
-#include <QtGui/QOpenGLContext>
-#include <private/qsgcontext_p.h>
+#include "qsgpropertyanimation.h"
 
-#include <private/qquickwindowmanager_p.h>
-
-class RenderThread;
-
-class WindowManager : public QObject, public QQuickWindowManager
+class QSGNumberAnimation : public QSGPropertyAnimation
 {
     Q_OBJECT
+
+    Q_PROPERTY(qreal from READ from WRITE setFrom)
+    Q_PROPERTY(qreal to READ to WRITE setTo)
+
 public:
-    WindowManager();
+    QSGNumberAnimation(QQuickItem *parent = 0);
 
-    void show(QQuickWindow *window);
-    void hide(QQuickWindow *window);
+    qreal from();
+    void setFrom(qreal);
 
-    void windowDestroyed(QQuickWindow *window);
-    void exposureChanged(QQuickWindow *window);
-
-    void handleExposure(QQuickWindow *window);
-    void handleObscurity(QQuickWindow *window);
-
-    QImage grab(QQuickWindow *);
-
-    void resize(QQuickWindow *, const QSize &) { }
-
-    void update(QQuickWindow *window);
-    void maybeUpdate(QQuickWindow *window);
-    volatile bool *allowMainThreadProcessing();
-    QSGContext *sceneGraphContext() const;
-
-    void releaseResources();
-
-    bool event(QEvent *);
-
-    void wakeup();
-
-public slots:
-    void animationStarted();
-    void animationStopped();
+    qreal to();
+    void setTo(qreal);
 
 private:
-    friend class RenderThread;
-
-    bool checkAndResetForceUpdate(QQuickWindow *window);
-
-    bool anyoneShowing();
-    void initialize();
-
-    void waitForReleaseComplete();
-    void replayDelayedEvents();
-
-    struct Window {
-        QQuickWindow *window;
-        uint pendingUpdate : 1;
-        uint pendingExpose : 1;
-        uint pendingForceUpdate : 1;
-    };
-
-    RenderThread *m_thread;
-    QAnimationDriver *m_animation_driver;
-    QList<Window> m_windows;
-
-    QHash<QQuickWindow *, QImage> m_grab_results;
-
-    uint renderPassScheduled : 1;
-    uint renderPassDone : 1;
-
-    int m_animation_timer;
-    int m_releases_requested;
+    Q_DISABLE_COPY(QSGNumberAnimation)
 };
 
-#endif // WINDOWMANAGER_H
+#endif // QSGNUMBERANIMATION_H
