@@ -185,7 +185,7 @@ void QSGAnimatorController::sync()
 
 void QSGAnimatorController::registerProperty(QSGAnimatedProperty *p)
 {
-    QString key = QString::number((int)p->qmlObject()) + "_" + p->name();
+    QString key = QString::number((qint64)p->qmlObject()) + "_" + p->name();
 
     if (!m_registeredProperties.contains(key))
          m_registeredProperties.insert(key, p);
