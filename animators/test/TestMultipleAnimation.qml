@@ -32,7 +32,7 @@ Rectangle {
             property: "rotation"
             from: 0.0
             to: 360.0
-            duration: 3*2000
+            duration: 6000
             easing.type: Easing.Bezier
             easing.bezierCurve: out60in33
             onCompleted: {
@@ -48,7 +48,7 @@ Rectangle {
             property: "scale"
             from: 1.0
             to: 0.5
-            duration: 3*2000
+            duration: 6000
             easing.type: Easing.Bezier
             easing.bezierCurve: out60in33
         }
@@ -78,7 +78,7 @@ Rectangle {
             property: "rotation"
             from: 0.0
             to: 360.0
-            duration: 3*2000
+            duration: 6000
             easing.type: Easing.Bezier
             easing.bezierCurve: out60in33
             onCompleted: referenceAnimation2.running = true
@@ -92,7 +92,7 @@ Rectangle {
             property: "scale"
             from: 1.0
             to: 0.5
-            duration: 3*2000
+            duration: 6000
             easing.type: Easing.Bezier
             easing.bezierCurve: out60in33
         }

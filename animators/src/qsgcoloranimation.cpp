@@ -41,7 +41,7 @@
 
 #include "qsgcoloranimation.h"
 
-QSGColorAnimation::QSGColorAnimation(QQuickItem *parent)
+QSGColorAnimation::QSGColorAnimation(QObject *parent)
     : QSGPropertyAnimation(parent)
 {
 }

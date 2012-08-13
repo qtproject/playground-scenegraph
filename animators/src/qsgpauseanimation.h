@@ -39,7 +39,6 @@
 **
 ****************************************************************************/
 
-
 #ifndef QSGPAUSEANIMATION_H
 #define QSGPAUSEANIMATION_H
 
@@ -51,10 +50,19 @@ class QSGPauseAnimation : public QSGAbstractAnimation
     Q_PROPERTY(int duration READ duration WRITE setDuration NOTIFY durationChanged)
 
 public:
-    QSGPauseAnimation(QQuickItem *parent = 0);
+    QSGPauseAnimation(QObject *parent = 0);
     int duration();
     void setDuration(int);
 
+    virtual QAbstractAnimationJob* transition(QQuickStateActions &actions,
+                            QQmlProperties &modified,
+                            TransitionDirection direction,
+                            QObject *defaultTarget = 0);
+
+    void prepareTransition(QQuickStateActions &actions,
+                           QQmlProperties &modified,
+                           TransitionDirection direction,
+                           QObject *defaultTarget);
 Q_SIGNALS:
     void durationChanged(int);
 

@@ -9,6 +9,17 @@ Rectangle {
     property var out33in60: [ 0.33, 0.0, 0.40, 1.0, 1.0, 1.0 ]
     property var out60in33: [ 0.60, 0.0, 0.67, 1.0, 1.0, 1.0 ]
 
+    Timer {
+        repeat: false
+        interval: 1000
+        running: true
+        onTriggered: {
+            console.log("onTriggered: setting rotation to 360")
+            renderThreadItem.rotation = 360
+            mainThreadItem.rotation = 360
+        }
+    }
+
     Rt.Item {
         id: renderThreadItem
         width: parent.width
@@ -23,19 +34,14 @@ Rectangle {
             font.pixelSize: 20
         }
 
-        Rt.NumberAnimation {
-            id: testAnimation
-            loops: 1
-            running: control.running && !renderThreadAnimationsDisabled
-            paused: control.paused
-            target: renderThreadItem
-            property: "rotation"
-            from: 0.0
-            to: 360.0
-            duration: 6000
-            easing.type: Easing.Bezier
-            easing.bezierCurve: out60in33
-            onCompleted: console.log("onCompleted value = " + renderThreadItem.rotation)
+        Behavior on rotation {
+            Rt.NumberAnimation {
+                duration: 6000
+                easing.type: Easing.Bezier
+                easing.bezierCurve: out60in33
+                onRunningChanged: console.log("onRunningChanged (renderThreadItem): " + running)
+                onStarted: console.log("onStarted (renderThreadItem): " + running)
+            }
         }
     }
 
@@ -54,18 +60,14 @@ Rectangle {
             font.pixelSize: 20
         }
 
-        NumberAnimation {
-            id: referenceAnimation
-            loops: 1
-            running: control.running && !mainThreadAnimationsDisabled
-            paused: control.paused
-            target: mainThreadItem
-            property: "rotation"
-            from: 0.0
-            to: 360.0
-            duration: 6000
-            easing.type: Easing.Bezier
-            easing.bezierCurve: out60in33
+        Behavior on rotation {
+            NumberAnimation {
+                duration: 6000
+                easing.type: Easing.Bezier
+                easing.bezierCurve: out60in33
+                onRunningChanged: console.log("onRunningChanged (mainThreadItem): " + running)
+                onStarted: console.log("onStarted (mainThreadItem): " + running)
+            }
         }
     }
 

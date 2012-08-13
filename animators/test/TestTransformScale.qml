@@ -39,7 +39,7 @@ Rectangle {
                 property: "xScale"
                 from: 1.0
                 to: 2.0
-                duration: 3*2000
+                duration: 6000
                 easing.type: Easing.Bezier
                 easing.bezierCurve: out60in33
             }
@@ -51,7 +51,7 @@ Rectangle {
                 property: "yScale"
                 from: 1.0
                 to: 2.0
-                duration: 3*2000
+                duration: 6000
                 easing.type: Easing.Bezier
                 easing.bezierCurve: out60in33
             }
@@ -89,7 +89,7 @@ Rectangle {
                 property: "xScale"
                 from: 1.0
                 to: 2.0
-                duration: 3*2000
+                duration: 6000
                 easing.type: Easing.Bezier
                 easing.bezierCurve: out60in33
             }
@@ -101,7 +101,7 @@ Rectangle {
                 property: "yScale"
                 from: 1.0
                 to: 2.0
-                duration: 3*2000
+                duration: 6000
                 easing.type: Easing.Bezier
                 easing.bezierCurve: out60in33
             }

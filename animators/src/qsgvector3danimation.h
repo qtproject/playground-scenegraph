@@ -39,7 +39,6 @@
 **
 ****************************************************************************/
 
-
 #ifndef QSGVECTOR3DANIMATION_H
 #define QSGVECTOR3DANIMATION_H
 
@@ -53,7 +52,7 @@ class QSGVector3DAnimation : public QSGPropertyAnimation
     Q_PROPERTY(QVector3D to READ to WRITE setTo)
 
 public:
-    QSGVector3DAnimation(QQuickItem *parent = 0);
+    QSGVector3DAnimation(QObject *parent = 0);
 
     QVector3D from();
     void setFrom(QVector3D);

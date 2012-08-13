@@ -31,7 +31,8 @@ HEADERS += \
     qsgcoloranimation.h \
     qsgvector3danimation.h \
     qsganimatorshadereffect.h \
-    qsganimatornode.h
+    qsganimatornode.h \
+    qsganimatorhost.h
 
 SOURCES += \
     qsganimatoritem.cpp \

@@ -37,7 +37,7 @@ Rectangle {
                 property: "angle"
                 from: 0.0
                 to: 360
-                duration: 3*2000
+                duration: 6000
                 easing.type: Easing.Bezier
                 easing.bezierCurve: out60in33
             }
@@ -48,7 +48,7 @@ Rectangle {
                 property: "angle"
                 from: 360
                 to: 0.0
-                duration: 3*2000
+                duration: 6000
                 easing.type: Easing.Bezier
                 easing.bezierCurve: out60in33
             }
@@ -84,7 +84,7 @@ Rectangle {
                 property: "angle"
                 from: 0.0
                 to: 360
-                duration: 3*2000
+                duration: 6000
                 easing.type: Easing.Bezier
                 easing.bezierCurve: out60in33
             }
@@ -95,7 +95,7 @@ Rectangle {
                 property: "angle"
                 from: 360
                 to: 0.0
-                duration: 3*2000
+                duration: 6000
                 easing.type: Easing.Bezier
                 easing.bezierCurve: out60in33
             }

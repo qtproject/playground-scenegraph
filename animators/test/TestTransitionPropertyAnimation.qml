@@ -9,6 +9,17 @@ Rectangle {
     property var out33in60: [ 0.33, 0.0, 0.40, 1.0, 1.0, 1.0 ]
     property var out60in33: [ 0.60, 0.0, 0.67, 1.0, 1.0, 1.0 ]
 
+    Timer {
+        repeat: false
+        interval: 1000
+        running: true
+        onTriggered: {
+            console.log("onTriggered: changing test state.")
+            renderThreadItem.state = "moved"
+            mainThreadItem.state = "moved"
+        }
+    }
+
     Rt.Item {
         id: renderThreadItem
         width: parent.width
@@ -23,33 +34,17 @@ Rectangle {
             font.pixelSize: 20
         }
 
-        Rt.SequentialAnimation {
-            id: testAnimation
-            running: control.running && !renderThreadAnimationsDisabled
-            paused: control.paused
-            loops: 3
+        states: State {
+              name: "moved"
+              PropertyChanges { target: renderThreadItem; rotation: 360 }
+        }
+
+        transitions: Transition {
             Rt.NumberAnimation {
-                loops: 1
-                running: false
                 target: renderThreadItem
-                property: "rotation"
-                from: 0.0
-                to: 360.0
-                duration: 6000
                 easing.type: Easing.Bezier
                 easing.bezierCurve: out60in33
-            }
-            Rt.PauseAnimation { duration: 2000 }
-            Rt.NumberAnimation {
-                loops: 1
-                running: false
-                target: renderThreadItem
-                property: "rotation"
-                from: 360.0
-                to: 0.0
                 duration: 6000
-                easing.type: Easing.Bezier
-                easing.bezierCurve: out60in33
             }
         }
     }
@@ -69,33 +64,18 @@ Rectangle {
             font.pixelSize: 20
         }
 
-        SequentialAnimation {
-            id: referenceAnimation
-            running: control.running && !mainThreadAnimationsDisabled
-            paused: control.paused
-            loops: 3
+        states: State {
+              name: "moved"
+              PropertyChanges { target: mainThreadItem; rotation: 360 }
+        }
+
+        transitions: Transition {
             NumberAnimation {
-                loops: 1
-                running: false
                 target: mainThreadItem
                 property: "rotation"
-                from: 0.0
-                to: 360.0
-                duration: 6000
                 easing.type: Easing.Bezier
                 easing.bezierCurve: out60in33
-            }
-            PauseAnimation { duration: 2000 }
-            NumberAnimation {
-                loops: 1
-                running: false
-                target: mainThreadItem
-                property: "rotation"
-                from: 360.0
-                to: 0.0
                 duration: 6000
-                easing.type: Easing.Bezier
-                easing.bezierCurve: out60in33
             }
         }
     }

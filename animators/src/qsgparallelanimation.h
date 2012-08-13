@@ -39,7 +39,6 @@
 **
 ****************************************************************************/
 
-
 #ifndef QSGPARALLELANIMATION_H
 #define QSGPARALLELANIMATION_H
 
@@ -49,7 +48,16 @@ class QSGParallelAnimation : public QSGAbstractAnimation
 {
     Q_OBJECT
 public:
-    QSGParallelAnimation(QQuickItem *parent = 0);
+    QSGParallelAnimation(QObject *parent = 0);
+    virtual QAbstractAnimationJob* transition(QQuickStateActions &actions,
+                            QQmlProperties &modified,
+                            TransitionDirection direction,
+                            QObject *defaultTarget = 0);
+
+    void prepareTransition(QQuickStateActions &actions,
+                           QQmlProperties &modified,
+                           TransitionDirection direction,
+                           QObject *defaultTarget);
 
 public Q_SLOTS:
     virtual void prepare(bool);

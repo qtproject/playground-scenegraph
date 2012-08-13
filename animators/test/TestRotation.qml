@@ -14,6 +14,7 @@ Rectangle {
         width: parent.width
         height: parent.height / 2
         visible: !renderThreadAnimationsDisabled
+        rotation: control.running ? 180 : 0
 
         Text {
             anchors.centerIn: parent
@@ -23,33 +24,16 @@ Rectangle {
             font.pixelSize: 20
         }
 
-        Rt.SequentialAnimation {
-            id: testAnimation
+        Rt.NumberAnimation {
             running: control.running && !renderThreadAnimationsDisabled
             paused: control.paused
-            loops: 1
-            Rt.NumberAnimation {
-                loops: 1
-                running: false
-                target: renderThreadItem
-                property: "rotation"
-                from: 0.0
-                to: 360.0
-                duration: 3*2000
-                easing.type: Easing.Bezier
-                easing.bezierCurve: out60in33
-            }
-            Rt.NumberAnimation {
-                loops: 1
-                running: false
-                target: renderThreadItem
-                property: "rotation"
-                from: 360.0
-                to: 0.0
-                duration: 3*2000
-                easing.type: Easing.Bezier
-                easing.bezierCurve: out60in33
-            }
+            target: renderThreadItem
+            property: "rotation"
+            from: 0.0
+            to: 360.0
+            duration: 6000
+            easing.type: Easing.Bezier
+            easing.bezierCurve: out60in33
         }
     }
 
@@ -68,33 +52,17 @@ Rectangle {
             font.pixelSize: 20
         }
 
-        SequentialAnimation {
-            id: referenceAnimation
+        NumberAnimation {
+            loops: 1
             running: control.running && !mainThreadAnimationsDisabled
             paused: control.paused
-            loops: 1
-            NumberAnimation {
-                loops: 1
-                running: false
-                target: mainThreadItem
-                property: "rotation"
-                from: 0.0
-                to: 360.0
-                duration: 3*2000
-                easing.type: Easing.Bezier
-                easing.bezierCurve: out60in33
-            }
-            NumberAnimation {
-                loops: 1
-                running: false
-                target: mainThreadItem
-                property: "rotation"
-                from: 360.0
-                to: 0.0
-                duration: 3*2000
-                easing.type: Easing.Bezier
-                easing.bezierCurve: out60in33
-            }
+            target: mainThreadItem
+            property: "rotation"
+            from: 0.0
+            to: 360.0
+            duration: 6000
+            easing.type: Easing.Bezier
+            easing.bezierCurve: out60in33
         }
     }
 

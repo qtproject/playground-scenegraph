@@ -66,12 +66,14 @@ public:
     bool isUpdating();
     QMatrix4x4 transformMatrix();
 
+    void registerAnimation(QSGAbstractAnimation *);
+    QQuickItem* item();
+
 public Q_SLOTS:
     void advance();
 
 private:
     void createProperties();
-    void createAnimators();
     qreal createAnimators(QSGAbstractAnimator *, QObject *, bool, qreal);
 
 private:

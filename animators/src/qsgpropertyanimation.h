@@ -39,7 +39,6 @@
 **
 ****************************************************************************/
 
-
 #ifndef QSGPROPERTYANIMATION_H
 #define QSGPROPERTYANIMATION_H
 
@@ -57,7 +56,7 @@ class QSGPropertyAnimation : public QSGAbstractAnimation
     Q_PROPERTY(QString properties READ properties WRITE setProperties NOTIFY propertiesChanged)
 
 public:
-    QSGPropertyAnimation(QQuickItem *parent = 0);
+    QSGPropertyAnimation(QObject *parent = 0);
 
     int duration();
     void setDuration(int);
@@ -79,6 +78,16 @@ public:
 
     const QString& properties();
     void setProperties(QString);
+
+    virtual QAbstractAnimationJob* transition(QQuickStateActions &actions,
+                            QQmlProperties &modified,
+                            TransitionDirection direction,
+                            QObject *defaultTarget = 0);
+
+    void prepareTransition(QQuickStateActions &actions,
+                           QQmlProperties &modified,
+                           TransitionDirection direction,
+                           QObject *defaultTarget);
 
 public Q_SLOTS:
     virtual void complete();

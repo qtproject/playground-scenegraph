@@ -39,11 +39,10 @@
 **
 ****************************************************************************/
 
-
 #include "qsgvector3danimation.h"
 #include "qsgpropertyanimation.h"
 
-QSGVector3DAnimation::QSGVector3DAnimation(QQuickItem *parent)
+QSGVector3DAnimation::QSGVector3DAnimation(QObject *parent)
     : QSGPropertyAnimation(parent)
 {
 }
@@ -67,5 +66,3 @@ void QSGVector3DAnimation::setTo(QVector3D a)
 {
     QSGPropertyAnimation::setTo(a);
 }
-
-

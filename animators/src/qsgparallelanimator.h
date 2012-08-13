@@ -39,7 +39,6 @@
 **
 ****************************************************************************/
 
-
 #ifndef QSGPARALLELANIMATOR_H
 #define QSGPARALLELANIMATOR_H
 

@@ -53,15 +53,8 @@
 #include "qsgsequentialanimation.h"
 #include "qsgparallelanimation.h"
 #include "qsgpauseanimation.h"
-
-#include <qpa/qplatformintegration.h>
-#include <qpa/qplatformnativeinterface.h>
-#include <private/qguiapplication_p.h>
-
 #include <QtQuick>
 #include <QtQuick/private/qquickitem_p.h>
-
-const char *FILE_NAME = "/tmp/.sgavsd";
 
 float get_env_float(const char *name, float defaultValue)
 {
@@ -85,25 +78,6 @@ QSGAnimatorController::QSGAnimatorController(QQuickItem *item)
 {
     m_thresholdForCatchup = get_env_float("QML_ANIMATION_DRIVER_CATCHUP_THRESHOLD", 250);
     m_catchupRatio = get_env_float("QML_ANIMATION_DRIVER_CATCHUP_RATIO", 0.05);
-
-    QPlatformNativeInterface *iface = QGuiApplicationPrivate::platform_integration->nativeInterface();
-    void *ptr = iface->nativeResourceForIntegration("vsync-delta-from-ioctl");
-
-    if (ptr) {
-        m_stableVsync = *static_cast<float *>(ptr);
-    } else {
-        FILE *file = fopen(FILE_NAME, "r");
-        if (file) {
-            float value = 0;
-            int size = fread(&value, sizeof(float), 1, file);
-            fclose(file);
-
-            // basic sanity check on the value...
-            if (size == sizeof(float) && value > 10 && value < 35) {
-                m_stableVsync = value;
-            }
-        }
-    }
 
 #ifdef ANIMATORS_DEBUG
     qDebug() << "QSGAnimatorController::QSGAnimatorController() VSYNC: " << m_stableVsync;
@@ -169,15 +143,7 @@ void QSGAnimatorController::advance()
                     m_currentAnimationDelay = 0.0;
                 }
                 m_currentAnimationCatchup = m_currentAnimationDelay * m_catchupRatio;
-#ifdef ANIMATORS_DEBUG
-                if (m_currentAnimationCatchup > 0)
-                    qDebug() << "QSGAnimatorController::advance() m_currentAnimationCatchup = " << m_currentAnimationCatchup;
-#endif
             }
-            //qDebug() << "QSGAnimatorController::advance() m_currentAnimationTime = " << m_currentAnimationTime;
-            //qDebug() << "QSGAnimatorController::advance() m_currentAnimationDelay = " << m_currentAnimationDelay;
-            //qDebug() << "QSGAnimatorController::advance() m_currentAnimationCatchup = " << m_currentAnimationCatchup;
-            //qDebug() << "----";
 
         } else {
             m_currentAnimationTime = t;
@@ -193,7 +159,6 @@ void QSGAnimatorController::sync()
 {
     if (!m_initialized) {
         createProperties();
-        createAnimators();
         m_initialized = true;
 
         if (m_topLevelAnimator.isUpdating())
@@ -220,10 +185,7 @@ void QSGAnimatorController::sync()
 
 void QSGAnimatorController::registerProperty(QSGAnimatedProperty *p)
 {
-#ifdef ANIMATORS_DEBUG
-    qDebug() << "registerProperty: " << p->name() << " of " << p->qmlObject() << " value = " << p->value();
-#endif
-    QString key = QString::number((quint64) p->qmlObject()) + "_" + p->name();
+    QString key = QString::number((int)p->qmlObject()) + "_" + p->name();
 
     if (!m_registeredProperties.contains(key))
          m_registeredProperties.insert(key, p);
@@ -234,10 +196,6 @@ void QSGAnimatorController::unregisterProperty(QSGAnimatedProperty *p)
 {
     QString key = QString::number((quint64)p->qmlObject()) + "_" + p->name();
     m_registeredProperties.remove(key);
-
-#ifdef ANIMATORS_DEBUG
-    qDebug() << "unregisterProperty: " << p->name() << " of " << p->qmlObject();
-#endif
 }
 
 QSGAnimatedProperty *QSGAnimatorController::registeredProperty(QString name, QObject *o)
@@ -300,14 +258,10 @@ void QSGAnimatorController::createProperties()
     }
 }
 
-void QSGAnimatorController::createAnimators()
+void QSGAnimatorController::registerAnimation(QSGAbstractAnimation *animation)
 {
-    int count = m_item->children().count();
-    qreal duration = 0.0;
-    for (int i = 0; i < count; i++) {
-        duration = createAnimators(&m_topLevelAnimator, m_item->children().at(i), false, 0.0);
-        m_topLevelAnimator.setDuration(duration);
-    }
+    qreal duration = createAnimators(&m_topLevelAnimator, animation, false, 0.0);
+    m_topLevelAnimator.setDuration(duration);
 }
 
 qreal QSGAnimatorController::createAnimators(QSGAbstractAnimator *controller, QObject *o, bool topLevelRunning, qreal startTime)
@@ -361,4 +315,9 @@ qreal QSGAnimatorController::createAnimators(QSGAbstractAnimator *controller, QO
         QObject::connect(pauseAnimation, SIGNAL(pausedChanged(bool)), m_item, SLOT(update()));
     }
     return duration;
+}
+
+QQuickItem* QSGAnimatorController::item()
+{
+    return m_item;
 }

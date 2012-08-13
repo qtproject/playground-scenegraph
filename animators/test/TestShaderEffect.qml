@@ -165,9 +165,9 @@ Rectangle {
         }
     }
 
-        Control {
-            id: control
-            anchors.bottom: parent.bottom
-            running: true
-        }
+    Control {
+        id: control
+        anchors.bottom: parent.bottom
+        running: true
     }
+}

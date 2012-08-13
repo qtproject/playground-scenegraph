@@ -46,19 +46,25 @@
 #include <QtQuick/private/qquickshadereffect_p.h>
 #include <QtQuick/private/qquickshadereffectnode_p.h>
 #include "qsganimatorcontroller.h"
+#include "qsganimatorhost.h"
 
 class QSGShaderEffectAnimatorNode;
 
-class QSGAnimatorShaderEffect : public QQuickShaderEffect
+class QSGAnimatorShaderEffect : public QQuickShaderEffect, public QSGAnimatorHost
 {
+    Q_OBJECT
 public:
     QSGAnimatorShaderEffect(QQuickItem *parent = 0);
     ~QSGAnimatorShaderEffect();
+
+    virtual void registerAnimation(QSGAbstractAnimation *);
 
 protected:
     virtual QSGNode *updatePaintNode(QSGNode *, UpdatePaintNodeData *);
 
 private:
+    QList<QSGAbstractAnimation*> m_pendingAnimations;
+    QList<QSGAbstractAnimation*> m_registeredAnimations;
     QQuickShaderEffectNode *m_shaderEffectNode;
     QSGShaderEffectAnimatorNode *m_animatorNode;
     Q_DISABLE_COPY(QSGAnimatorShaderEffect)

@@ -109,6 +109,13 @@ QSGNode *QSGAnimatorShaderEffect::updatePaintNode(QSGNode *node, UpdatePaintNode
     }
 
     if (m_animatorNode) {
+        for (int i = 0; i < m_pendingAnimations.count(); i++) {
+            QSGAbstractAnimation *a = m_pendingAnimations.at(i);
+            m_animatorNode->controller().registerAnimation(a);
+            m_registeredAnimations.append(a);
+        }
+        m_pendingAnimations.clear();
+
         m_animatorNode->controller().sync();
         m_animatorNode->setTransformNode(transformNode);
         m_animatorNode->setOpacityNode(opacityNode);
@@ -116,4 +123,12 @@ QSGNode *QSGAnimatorShaderEffect::updatePaintNode(QSGNode *node, UpdatePaintNode
     }
 
     return m_shaderEffectNode;
+}
+
+void QSGAnimatorShaderEffect::registerAnimation(QSGAbstractAnimation *a)
+{
+    if (!m_registeredAnimations.contains(a) && !m_pendingAnimations.contains(a))
+        m_pendingAnimations.append(a);
+
+    update();
 }

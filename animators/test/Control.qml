@@ -13,6 +13,14 @@ Rectangle {
     }
 
     Timer {
+        id: blockerStartTimer
+        interval: 1500
+        repeat: false
+        running: true
+        onTriggered: control.blocking = true
+    }
+
+    Timer {
         id: blockerStopTimer
         interval: 20000
         repeat: false

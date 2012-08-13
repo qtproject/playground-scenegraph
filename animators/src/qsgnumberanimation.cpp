@@ -42,7 +42,7 @@
 #include "qsgnumberanimation.h"
 #include <QDebug>
 
-QSGNumberAnimation::QSGNumberAnimation(QQuickItem *parent)
+QSGNumberAnimation::QSGNumberAnimation(QObject *parent)
     : QSGPropertyAnimation(parent)
 {
 }

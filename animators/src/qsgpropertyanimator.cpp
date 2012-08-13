@@ -53,19 +53,6 @@ QSGPropertyAnimator::QSGPropertyAnimator(QSGAnimatorController* controller, QSGA
     , m_to(0.0)
 {
     copyQmlObjectData();
-#ifdef ANIMATORS_DEBUG
-    qDebug() << "  target: " << qmlObject->target();
-    qDebug() << "  property: " << qmlObject->property();
-    qDebug() << "  properties: " << qmlObject->properties();
-    qDebug() << "  from: " << qmlObject->from();
-    qDebug() << "  to: " << qmlObject->to();
-    qDebug() << "  duration: " << qmlObject->duration();
-
-    qDebug() << "  running: " << qmlObject->isRunning();
-    qDebug() << "  startTime: " << startTime;
-    qDebug() << "  loops: " << qmlObject->loops();
-    qDebug() << "  easing.type: " << qmlObject->easing().type();
-#endif
 }
 
 void QSGPropertyAnimator::updateProperty(QObject *target, const QString& p)

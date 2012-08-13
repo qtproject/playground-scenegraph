@@ -52,7 +52,7 @@ class QSGColorAnimation : public QSGPropertyAnimation
     Q_PROPERTY(QColor to READ to WRITE setTo)
 
 public:
-    QSGColorAnimation(QQuickItem *parent = 0);
+    QSGColorAnimation(QObject *parent = 0);
 
     QColor from();
     void setFrom(QColor);

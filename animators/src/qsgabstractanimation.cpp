@@ -39,90 +39,59 @@
 **
 ****************************************************************************/
 
-
 #include "qsgabstractanimation.h"
+#include "qsganimatorhost.h"
+#include <private/qpauseanimationjob_p.h>
 
-QSGAbstractAnimation::QSGAbstractAnimation(QQuickItem *parent)
-  : QQuickItem(parent)
-  , m_running(false)
-  , m_paused(false)
-  , m_alwaysRunToEnd(false)
-  , m_loops(1)
-  , m_target(0)
+QSGAbstractAnimation::QSGAbstractAnimation(QObject *parent)
+  : QQuickAnimationGroup(parent)
+  , m_registered(false)
+  , m_transitionRunning(false)
 {
-}
-
-QObject* QSGAbstractAnimation::target()
-{
-    return m_target;
-}
-
-void QSGAbstractAnimation::setTarget(QObject* a)
-{
-    if (m_target != a) {
-        m_target = a;
-        emit targetChanged();
-    }
-}
-
-int QSGAbstractAnimation::loops()
-{
-    return m_loops;
-}
-
-void QSGAbstractAnimation::setLoops(int a)
-{
-    if (m_loops != a) {
-        m_loops = a;
-        emit loopCountChanged(m_loops);
-    }
-}
-
-bool QSGAbstractAnimation::isRunning()
-{
-    return m_running;
-}
-
-void QSGAbstractAnimation::setRunning(bool a)
-{
-    if (m_running != a) {
-        m_running = a;
-        emit runningChanged(m_running);
-    }
-}
-
-bool QSGAbstractAnimation::isPaused()
-{
-    return m_paused;
-}
-
-void QSGAbstractAnimation::setPaused(bool a)
-{
-    if (m_paused != a) {
-        m_paused = a;
-        emit pausedChanged(m_paused);
-    }
-}
-
-bool QSGAbstractAnimation::alwaysRunToEnd()
-{
-    return m_alwaysRunToEnd;
-}
-
-void QSGAbstractAnimation::setAlwaysRunToEnd(bool a)
-{
-    if (m_alwaysRunToEnd != a) {
-        m_alwaysRunToEnd = a;
-        emit alwaysRunToEndChanged(m_alwaysRunToEnd);
-    }
 }
 
 void QSGAbstractAnimation::complete()
 {
-    emit completed();
-    setRunning(false);
+    m_transitionRunning = false;
 }
 
 void QSGAbstractAnimation::prepare(bool)
 {
+}
+
+bool QSGAbstractAnimation::isTransitionRunning()
+{
+    return m_transitionRunning;
+}
+
+void QSGAbstractAnimation::registerToHost(QObject* target)
+{
+    if (m_registered)
+        return;
+
+    QObject *host = target;
+    QObject *hostParent = host ? host->parent() : 0;
+
+    while (host && !host->inherits("QSGAnimatorHost")) {
+        host = hostParent;
+        hostParent = host ? host->parent() : 0;
+    }
+
+    QObject *animation = this;
+    QObject *animationParent = parent();
+
+    while (animationParent && animationParent->inherits("QSGAbstractAnimation")) {
+        animation = animationParent;
+        animationParent = animation ? animation->parent() : 0;
+    }
+
+    if (host && host->inherits("QSGAnimatorHost")) {
+        QSGAnimatorHost* h = dynamic_cast<QSGAnimatorHost*> (host);
+        QSGAbstractAnimation *a = dynamic_cast<QSGAbstractAnimation*> (animation);
+        h->registerAnimation(a);
+        m_registered = true;
+    }
+    else {
+        qWarning() << "QSGAbstractAnimation::registerToHost() unable to register, " << target << " (or its parent) is not QSGAnimatorHost.";
+    }
 }

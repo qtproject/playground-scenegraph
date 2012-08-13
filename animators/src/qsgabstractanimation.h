@@ -44,55 +44,28 @@
 
 #include <QtCore>
 #include <QtQuick>
+#include <private/qquickanimation_p.h>
 
-class QSGAbstractAnimation : public QQuickItem
+class QSGAbstractAnimation : public QQuickAnimationGroup
 {
     Q_OBJECT
-    Q_ENUMS(Loops)
-    Q_PROPERTY(bool running READ isRunning WRITE setRunning NOTIFY runningChanged)
-    Q_PROPERTY(bool paused READ isPaused WRITE setPaused NOTIFY pausedChanged)
-    Q_PROPERTY(bool alwaysRunToEnd READ alwaysRunToEnd WRITE setAlwaysRunToEnd NOTIFY alwaysRunToEndChanged)
-    Q_PROPERTY(int loops READ loops WRITE setLoops NOTIFY loopCountChanged)
-    Q_PROPERTY(QObject* target READ target WRITE setTarget NOTIFY targetChanged)
-
 public:
-    QSGAbstractAnimation(QQuickItem *parent = 0);
-
-    enum Loops { Infinite = -2 };
-
-    bool isRunning();
-    void setRunning(bool);
-
-    bool isPaused();
-    void setPaused(bool);
-
-    bool alwaysRunToEnd();
-    void setAlwaysRunToEnd(bool);
-
-    int loops();
-    void setLoops(int);
-
-    QObject* target();
-    void setTarget(QObject*);
-
+    QSGAbstractAnimation(QObject *parent = 0);
+    bool isTransitionRunning();
+    virtual void prepareTransition(QQuickStateActions &actions,
+                                   QQmlProperties &modified,
+                                   TransitionDirection direction,
+                                   QObject *defaultTarget = 0) = 0;
 public Q_SLOTS:
     virtual void complete();
     virtual void prepare(bool);
 
-Q_SIGNALS:
-    void completed();
-    void runningChanged(bool);
-    void pausedChanged(bool);
-    void alwaysRunToEndChanged(bool);
-    void loopCountChanged(int);
-    void targetChanged();
+protected:
+    void registerToHost(QObject*);
 
 protected:
-    bool m_running;
-    bool m_paused;
-    bool m_alwaysRunToEnd;
-    int m_loops;
-    QObject* m_target;
+    bool m_registered;
+    bool m_transitionRunning;
 
 private:
     Q_DISABLE_COPY(QSGAbstractAnimation)

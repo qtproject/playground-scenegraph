@@ -39,7 +39,6 @@
 **
 ****************************************************************************/
 
-
 #include "qsgtoplevelanimator.h"
 #include "qsganimatorcontroller.h"
 #include <QDebug>

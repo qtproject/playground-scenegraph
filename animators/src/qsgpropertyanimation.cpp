@@ -40,11 +40,12 @@
 ****************************************************************************/
 
 #include "qsgpropertyanimation.h"
+#include <private/qpauseanimationjob_p.h>
 
 #define MIN_OPACITY 0.001
 #define MAX_OPACITY 0.999
 
-QSGPropertyAnimation::QSGPropertyAnimation(QQuickItem *parent)
+QSGPropertyAnimation::QSGPropertyAnimation(QObject *parent)
     : QSGAbstractAnimation(parent)
     , m_duration(0)
     , m_from(0)
@@ -150,23 +151,62 @@ void QSGPropertyAnimation::complete()
     if (m_target) {
         QVariant v = m_to;
         QString p = m_property;
-        if (m_property.contains(".x")) {
-            p = m_property.left(m_property.length() - 2);
-            v = m_target->property(p.toAscii().constData());
-            QVector3D vec = qvariant_cast<QVector3D>(v);
-            vec.setX(m_to.toReal());
-            v = vec;
-        } else if (m_property.contains(".y")) {
-            v = m_target->property(p.toAscii().constData());
-            QVector3D vec = qvariant_cast<QVector3D>(v);
-            vec.setY(m_to.toReal());
-            v = vec;
-        } else if (m_property.contains(".z")) {
-            v = m_target->property(p.toAscii().constData());
-            QVector3D vec = qvariant_cast<QVector3D>(v);
-            vec.setZ(m_to.toReal());
-            v = vec;
+
+        int index = m_property.indexOf(".");
+        if (index > 0)
+            p.chop(m_property.length() - index);
+
+        QVariant value = m_target->property(p.toAscii().constData());
+
+        switch (value.type()) {
+            case QMetaType::QVector3D:
+                {
+                if (m_property.contains(".x")) {
+                    QVector3D vec = qvariant_cast<QVector3D>(value);
+                    vec.setX(m_to.toReal());
+                    v = vec;
+                } else if (m_property.contains(".y")) {
+                    QVector3D vec = qvariant_cast<QVector3D>(value);
+                    vec.setY(m_to.toReal());
+                    v = vec;
+                } else if (m_property.contains(".z")) {
+                    QVector3D vec = qvariant_cast<QVector3D>(value);
+                    vec.setZ(m_to.toReal());
+                    v = vec;
+                }
+                break;
+                }
+            case QMetaType::QPoint:
+                {
+                if (m_property.contains(".x")) {
+                    QPoint vec = qvariant_cast<QPoint>(value);
+                    vec.setX(m_to.toReal());
+                    v = vec;
+                } else if (m_property.contains(".y")) {
+                    QPoint vec = qvariant_cast<QPoint>(value);
+                    vec.setY(m_to.toReal());
+                    v = vec;
+                }
+                break;
+                }
+            case QMetaType::QPointF:
+                {
+                if (m_property.contains(".x")) {
+                    QPointF vec = qvariant_cast<QPointF>(value);
+                    vec.setX(m_to.toReal());
+                    v = vec;
+                } else if (m_property.contains(".y")) {
+                    QPointF vec = qvariant_cast<QPointF>(value);
+                    vec.setY(m_to.toReal());
+                    v = vec;
+                }
+                break;
+                }
+
+            default:
+                break;
         }
+
         m_target->setProperty(p.toAscii().constData(), v);
     }
     QSGAbstractAnimation::complete();
@@ -183,8 +223,48 @@ void QSGPropertyAnimation::prepare(bool v)
         else if (t->opacity() > MAX_OPACITY) {
             t->setOpacity(MAX_OPACITY);
         }
-#ifdef ANIMATORS_DEBUG
-            qDebug() << "QSGPropertyAnimation::prepare opacity is now " << t->opacity();
-#endif
     }
+
+    registerToHost(m_target);
+}
+
+QAbstractAnimationJob* QSGPropertyAnimation::transition(QQuickStateActions &actions,
+                        QQmlProperties &modified,
+                        TransitionDirection direction,
+                        QObject *defaultTarget)
+{
+    if (!isRunning())
+        m_transitionRunning = true;
+
+    prepareTransition(actions, modified, direction, defaultTarget);
+
+    QPauseAnimationJob *job = new QPauseAnimationJob();
+    job->setLoopCount(loops());
+    job->setDuration(m_duration);
+    return job;
+}
+
+void QSGPropertyAnimation::prepareTransition(QQuickStateActions &actions,
+                                             QQmlProperties &,
+                                             TransitionDirection direction,
+                                             QObject *)
+{
+    if (direction != Forward)
+        qWarning("QSGPropertyAnimation::prepareTransition - Backward transition not yet supported.");
+
+    for (int i = 0; i < actions.count(); i++) {
+        if (actions.at(i).property.object() != actions.at(0).property.object()) {
+            qWarning("QSGPropertyAnimation::prepareTransition - Multiple targets not yet supported.");
+            continue;
+        }
+
+        if (m_property == actions.at(i).property.name() || m_property.isEmpty() ) {
+            m_property = actions.at(i).property.name();
+            m_target = actions.at(i).property.object();
+            m_from = actions.at(i).fromValue;
+            m_to = actions.at(i).toValue;
+        }
+    }
+
+    prepare(true);
 }

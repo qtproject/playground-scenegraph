@@ -48,7 +48,17 @@ class QSGSequentialAnimation : public QSGAbstractAnimation
 {
     Q_OBJECT
 public:
-    QSGSequentialAnimation(QQuickItem *parent = 0);
+    QSGSequentialAnimation(QObject *parent = 0);
+
+    virtual QAbstractAnimationJob* transition(QQuickStateActions &actions,
+                            QQmlProperties &modified,
+                            TransitionDirection direction,
+                            QObject *defaultTarget = 0);
+
+    void prepareTransition(QQuickStateActions &actions,
+                           QQmlProperties &modified,
+                           TransitionDirection direction,
+                           QObject *defaultTarget);
 
 public Q_SLOTS:
     virtual void prepare(bool);

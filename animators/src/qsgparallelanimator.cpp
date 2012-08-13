@@ -47,9 +47,6 @@
 QSGParallelAnimator::QSGParallelAnimator(QSGAnimatorController* controller, QSGAbstractAnimator *parent, QSGParallelAnimation *qmlObject, qreal startTime)
     : QSGAbstractAnimator(controller, parent, qmlObject, startTime)
 {
-#ifdef ANIMATORS_DEBUG
-    qDebug() << "QSGParallelAnimator::QSGParallelAnimator" << this;
-#endif
 }
 
 void QSGParallelAnimator::advance(qreal t)

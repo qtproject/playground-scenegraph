@@ -89,9 +89,6 @@ void QSGAbstractAnimator::advance(qreal t)
     }
 
     if (m_runningToEnd && m_elapsed > m_stopTime) {
-#ifdef ANIMATORS_DEBUG
-        qDebug() << "QSGAbstractAnimator::advance running to end, stopping soon. m_elapsed = " << m_elapsed << " m_stopTime = " << m_stopTime;
-#endif
         m_runningToEnd = false;
         m_done = true;
         m_stopTime = 0.0;
@@ -116,8 +113,8 @@ qreal QSGAbstractAnimator::sync(bool topLevelRunning, qreal startTime)
 
     copyQmlObjectData();
     if (m_qmlObject) {
-        m_running = m_qmlObject->isRunning() || topLevelRunning;
-        m_hasControl = m_qmlObject->isRunning() && !topLevelRunning;
+        m_running = m_qmlObject->isTransitionRunning() || m_qmlObject->isRunning() || topLevelRunning;
+        m_hasControl = (m_qmlObject->isTransitionRunning() || m_qmlObject->isRunning()) && !topLevelRunning;
     }
 
     // Normal stop request detected from QML side.
@@ -129,9 +126,6 @@ qreal QSGAbstractAnimator::sync(bool topLevelRunning, qreal startTime)
     if (m_alwaysRunToEnd && wasRunning && !m_running && m_duration > 0 && !m_runningToEnd) {
         m_runningToEnd = true;
         m_stopTime = m_startTime + qMax(1, 1 + int((m_elapsed - m_startTime) / m_duration)) * m_duration;
-#ifdef ANIMATORS_DEBUG
-        qDebug() << "QSGAbstractAnimator::sync m_stopTime = " << m_stopTime << " m_elapsed = " << m_elapsed;
-#endif
     }
 
     // Running, cancel possible run to the end sequence etc.
@@ -146,17 +140,11 @@ qreal QSGAbstractAnimator::sync(bool topLevelRunning, qreal startTime)
         m_stopping = false;
         m_running = false;
         m_done = true;
-#ifdef ANIMATORS_DEBUG
-        qDebug() << "QSGAbstractAnimator::sync stopping because end of animation reached.";
-#endif
     }
 
     // If done, let QML side know about it.
     if (m_qmlObject && m_done) {
         m_done = false;
-#ifdef ANIMATORS_DEBUG
-        qDebug() << "QSGAbstractAnimator::sync calling complete";
-#endif
         int count = m_animators.count();
         for (int i = 0; i < count; i++) {
             QObject *o = m_animators.at(i)->qmlObject();
@@ -173,19 +161,12 @@ void QSGAbstractAnimator::registerAnimator(QSGAbstractAnimator *a)
 {
     if (!m_animators.contains(a)) {
         m_animators.append(a);
-#ifdef ANIMATORS_DEBUG
-        qDebug() << " ";
-        qDebug() << "QSGAbstractAnimator::registerAnimator - " << a;
-#endif
     }
 }
 
 void QSGAbstractAnimator::unregisterAnimator(QSGAbstractAnimator *a)
 {
     m_animators.removeAll(a);
-#ifdef ANIMATORS_DEBUG
-    qDebug() << "QSGAbstractAnimator::unregisterAnimator - " << a;
-#endif
 }
 
 QSGAbstractAnimator* QSGAbstractAnimator::parent()

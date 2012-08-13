@@ -20,4 +20,9 @@ ListModel {
     ListElement { name: "TestMultipleAnimation.qml"; group: "Animations"; last: false }
     ListElement { name: "TestSequentialAnimationAlwaysRunToEnd.qml"; group: "Animations"; last: false }
     ListElement { name: "TestNumberAnimationAlwaysRunToEnd.qml"; group: "Animations"; last: true }
+    ListElement { name: "TestTransitionPropertyAnimation.qml"; group: "Transitions"; last: false }
+    ListElement { name: "TestTransitionSequentialAnimation.qml"; group: "Transitions"; last: true }
+    ListElement { name: "TestBehaviorPropertyAnimation.qml"; group: "Behavior"; last: false }
+    ListElement { name: "TestBehaviorSequentialAnimation.qml"; group: "Behavior"; last: true }
+    ListElement { name: "TestOnPropertyAnimation.qml"; group: "On property"; last: true }
 }

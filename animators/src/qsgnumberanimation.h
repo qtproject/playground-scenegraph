@@ -38,7 +38,6 @@
 ** $QT_END_LICENSE$
 **
 ****************************************************************************/
-
 #ifndef QSGNUMBERANIMATION_H
 #define QSGNUMBERANIMATION_H
 
@@ -52,7 +51,7 @@ class QSGNumberAnimation : public QSGPropertyAnimation
     Q_PROPERTY(qreal to READ to WRITE setTo)
 
 public:
-    QSGNumberAnimation(QQuickItem *parent = 0);
+    QSGNumberAnimation(QObject *parent = 0);
 
     qreal from();
     void setFrom(qreal);

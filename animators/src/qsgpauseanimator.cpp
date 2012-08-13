@@ -50,12 +50,6 @@ QSGPauseAnimator::QSGPauseAnimator(QSGAnimatorController* controller, QSGAbstrac
 {
     if (m_qmlObject)
         m_duration = m_qmlObject->duration();
-
-#ifdef ANIMATORS_DEBUG
-    qDebug() << "QSGPauseAnimator::QSGPauseAnimator" << this;
-    qDebug() << "  startTime: " << startTime;
-    qDebug() << "  duration: " << qmlObject->duration();
-#endif
 }
 
 void QSGPauseAnimator::advance(qreal t)

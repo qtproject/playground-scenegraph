@@ -39,37 +39,14 @@
 **
 ****************************************************************************/
 
-#include "qsganimatedtranslate.h"
-#include "qsganimatedproperty.h"
-#include "qsganimatorcontroller.h"
-#include <QtGui>
+#ifndef QSGANIMATORHOST_H
+#define QSGANIMATORHOST_H
 
-QSGAnimatedTranslate::QSGAnimatedTranslate(QSGAnimatorController* controller, QObject* qmlObject) : QSGAnimatedTransform(controller, qmlObject)
+class QSGAnimatorHost
 {
-    m_x = new QSGAnimatedProperty(m_qmlObject, "x", 0.0);
-    m_y = new QSGAnimatedProperty(m_qmlObject, "y", 0.0);
+public:
+    virtual void registerAnimation(QSGAbstractAnimation *) = 0;
+};
 
-    // controller takes owneship
-    controller->registerProperty(m_x);
-    controller->registerProperty(m_y);
 
-    if (qmlObject) {
-        setX(qmlObject->property("x"));
-        setY(qmlObject->property("y"));
-    }
-}
-
-void QSGAnimatedTranslate::setX(QVariant x)
-{
-    m_x->setValue(x);
-}
-
-void QSGAnimatedTranslate::setY(QVariant y)
-{
-    m_y->setValue(y);
-}
-
-void QSGAnimatedTranslate::applyTo(QMatrix4x4 &m)
-{
-    m.translate(m_x->value().toReal(), m_y->value().toReal());
-}
+#endif // QSGANIMATORHOST_H

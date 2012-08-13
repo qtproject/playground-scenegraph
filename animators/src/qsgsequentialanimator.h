@@ -39,7 +39,6 @@
 **
 ****************************************************************************/
 
-
 #ifndef QSGSEQUENTIALANIMATOR_H
 #define QSGSEQUENTIALANIMATOR_H
 

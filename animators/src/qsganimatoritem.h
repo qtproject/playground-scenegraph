@@ -44,22 +44,27 @@
 
 #include <QtQuick/QQuickItem>
 #include "qsganimatorcontroller.h"
+#include "qsganimatorhost.h"
 
 class QSGAnimatorNode;
 class QSGAnimatorController;
 
-class QSGAnimatorItem : public QQuickItem
+class QSGAnimatorItem : public QQuickItem, public QSGAnimatorHost
 {
     Q_OBJECT
 public:
     QSGAnimatorItem(QQuickItem *parent = 0);
     ~QSGAnimatorItem();
 
+    virtual void registerAnimation(QSGAbstractAnimation *);
+
 protected:
     virtual QSGNode *updatePaintNode(QSGNode *, UpdatePaintNodeData *);
 
 private:
     QSGAnimatorNode *m_animatorNode;
+    QList<QSGAbstractAnimation*> m_pendingAnimations;
+    QList<QSGAbstractAnimation*> m_registeredAnimations;
     Q_DISABLE_COPY(QSGAnimatorItem)
 };
 

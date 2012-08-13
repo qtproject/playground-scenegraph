@@ -40,8 +40,9 @@
 ****************************************************************************/
 
 #include "qsgpauseanimation.h"
+#include <private/qpauseanimationjob_p.h>
 
-QSGPauseAnimation::QSGPauseAnimation(QQuickItem* parent)
+QSGPauseAnimation::QSGPauseAnimation(QObject* parent)
     : QSGAbstractAnimation(parent)
 {
 }
@@ -57,4 +58,25 @@ void QSGPauseAnimation::setDuration(int a)
         m_duration = a;
         emit durationChanged(m_duration);
     }
+}
+
+QAbstractAnimationJob* QSGPauseAnimation::transition(QQuickStateActions &actions,
+                        QQmlProperties &modified,
+                        TransitionDirection direction,
+                        QObject *defaultTarget)
+{
+    prepareTransition(actions, modified, direction, defaultTarget);
+
+    QPauseAnimationJob *job = new QPauseAnimationJob();
+    job->setLoopCount(loops());
+    job->setDuration(m_duration);
+    return job;
+}
+
+void QSGPauseAnimation::prepareTransition(QQuickStateActions &,
+                                             QQmlProperties &,
+                                             TransitionDirection,
+                                             QObject *)
+{
+    // Nothing to do
 }

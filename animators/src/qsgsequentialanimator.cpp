@@ -39,7 +39,6 @@
 **
 ****************************************************************************/
 
-
 #include "qsgsequentialanimator.h"
 #include "qsgsequentialanimation.h"
 #include "qsganimatorcontroller.h"
@@ -48,11 +47,6 @@
 QSGSequentialAnimator::QSGSequentialAnimator(QSGAnimatorController* controller, QSGAbstractAnimator *parent, QSGAbstractAnimation *qmlObject, qreal startTime)
     : QSGAbstractAnimator(controller, parent, qmlObject, startTime)
 {
-#ifdef ANIMATORS_DEBUG
-    qDebug() << "QSGSequentialAnimator::QSGSequentialAnimator" << this;
-    qDebug() << "  startTime: " << startTime;
-    qDebug() << "  loops: " << qmlObject->loops();
-#endif
 }
 
 void QSGSequentialAnimator::advance(qreal t)

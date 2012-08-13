@@ -44,7 +44,7 @@
 #include "qsganimatorcontroller.h"
 #include <QtGui>
 
-QSGAnimatedTransform::QSGAnimatedTransform(QSGAnimatorController* controller, QObject* qmlObject)
+QSGAnimatedTransform::QSGAnimatedTransform(QSGAnimatorController* , QObject* qmlObject)
  : m_qmlObject(qmlObject)
 {
 }

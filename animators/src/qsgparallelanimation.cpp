@@ -40,8 +40,9 @@
 ****************************************************************************/
 
 #include "qsgparallelanimation.h"
+#include <private/qpauseanimationjob_p.h>
 
-QSGParallelAnimation::QSGParallelAnimation(QQuickItem *parent)
+QSGParallelAnimation::QSGParallelAnimation(QObject *parent)
     : QSGAbstractAnimation(parent)
 {
     connect(this, SIGNAL(runningChanged(bool)), SLOT(prepare(bool)));
@@ -54,5 +55,41 @@ void QSGParallelAnimation::prepare(bool v)
         QSGAbstractAnimation *a = qobject_cast<QSGAbstractAnimation*>(children().at(i));
         if (a)
             a->prepare(v);
+    }
+}
+
+QAbstractAnimationJob* QSGParallelAnimation::transition(QQuickStateActions &actions,
+                        QQmlProperties &modified,
+                        TransitionDirection direction,
+                        QObject *defaultTarget)
+{
+    if (!isRunning())
+        m_transitionRunning = true;
+
+    prepareTransition(actions, modified, direction, defaultTarget);
+
+    QPauseAnimationJob *job = new QPauseAnimationJob();
+    job->setLoopCount(loops());
+    job->setDuration(-1);
+    return job;
+}
+
+void QSGParallelAnimation::prepareTransition(QQuickStateActions &actions,
+                                             QQmlProperties &modified,
+                                             TransitionDirection direction,
+                                             QObject *defaultTarget)
+{
+    if (direction != Forward)
+        qWarning("QSGParallelAnimation::prepareTransition - Backward transition not yet supported.");
+
+    if (actions.count() > 0) {
+        registerToHost(actions.at(0).property.object());
+    }
+
+    int count = children().count();
+    for (int i = 0; i < count; i++) {
+        QSGAbstractAnimation* a = dynamic_cast<QSGAbstractAnimation*> (children().at(i));
+        if (a)
+            a->prepareTransition(actions, modified, direction, defaultTarget);
     }
 }

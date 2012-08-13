@@ -61,9 +61,6 @@ QSGAnimatedProperty::QSGAnimatedProperty(QObject *qmlObject, QString name, QVari
 
 QSGAnimatedProperty::~QSGAnimatedProperty()
 {
-#ifdef ANIMATORS_DEBUG
-    qDebug() << "QSGAnimatedProperty::~QSGAnimatedProperty() " << m_name;
-#endif
 }
 
 void QSGAnimatedProperty::setQmlObject(QObject *v)
