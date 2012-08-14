@@ -81,10 +81,10 @@ void QSGAnimatorNode::preprocess()
             qreal scale = m_controller->registeredProperty("scale")->value().toReal();
             qreal rotation = m_controller->registeredProperty("rotation")->value().toReal();
             m.translate(transformOrigin.x(), transformOrigin.y());
+            m.translate(x, y);
             m.scale(scale);
             m.rotate(rotation, 0, 0, 1);
             m.translate(-transformOrigin.x(), -transformOrigin.y());
-            m.translate(x, y);
             m_transformNode->setMatrix(m);
 
             if (m_controller->isUpdating())
