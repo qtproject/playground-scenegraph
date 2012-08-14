@@ -96,12 +96,11 @@ const QEvent::Type WM_Show              = QEvent::Type(QEvent::User + 1);
 const QEvent::Type WM_Hide              = QEvent::Type(QEvent::User + 2);
 const QEvent::Type WM_LockAndSync       = QEvent::Type(QEvent::User + 3);
 const QEvent::Type WM_RequestSync       = QEvent::Type(QEvent::User + 4);
-const QEvent::Type WM_NotifyDoneRender  = QEvent::Type(QEvent::User + 5);
-const QEvent::Type WM_TryRelease        = QEvent::Type(QEvent::User + 6);
-const QEvent::Type WM_ReleaseHandled    = QEvent::Type(QEvent::User + 7);
-const QEvent::Type WM_Grab              = QEvent::Type(QEvent::User + 8);
-const QEvent::Type WM_GrabResult        = QEvent::Type(QEvent::User + 9);
-const QEvent::Type WM_EnterWait         = QEvent::Type(QEvent::User + 10);
+const QEvent::Type WM_RequestRepaint    = QEvent::Type(QEvent::User + 5);
+const QEvent::Type WM_Resize            = QEvent::Type(QEvent::User + 6);
+const QEvent::Type WM_TryRelease        = QEvent::Type(QEvent::User + 7);
+const QEvent::Type WM_UpdateLater       = QEvent::Type(QEvent::User + 8);
+const QEvent::Type WM_Grab              = QEvent::Type(QEvent::User + 9);
 const QEvent::Type WM_AdvanceAnimations = QEvent::Type(QEvent::User + 11);
 
 template <typename T> T *windowFor(const QList<T> list, QQuickWindow *window)
@@ -115,28 +114,37 @@ template <typename T> T *windowFor(const QList<T> list, QQuickWindow *window)
 }
 
 
-class WMwindowEvent : public QEvent
+class WMWindowEvent : public QEvent
 {
 public:
-    WMwindowEvent(QQuickWindow *c, QEvent::Type type) : QEvent(type), window(c) { }
+    WMWindowEvent(QQuickWindow *c, QEvent::Type type) : QEvent(type), window(c) { }
     QQuickWindow *window;
 };
 
 
-class WMShowEvent : public WMwindowEvent
+class WMResizeEvent : public WMWindowEvent
 {
 public:
-    WMShowEvent(QQuickWindow *c) : WMwindowEvent(c, WM_Show), size(c->size()) { }
+    WMResizeEvent(QQuickWindow *c, const QSize &s) : WMWindowEvent(c, WM_Resize), size(s) { }
     QSize size;
 };
 
 
-class WMGrabResultEvent : public WMwindowEvent
+class WMShowEvent : public WMWindowEvent
 {
 public:
-    WMGrabResultEvent(QQuickWindow *window, const QImage &r) : WMwindowEvent(window, WM_GrabResult), result(r) { }
-    QImage result;
+    WMShowEvent(QQuickWindow *c) : WMWindowEvent(c, WM_Show), size(c->size()) { }
+    QSize size;
 };
+
+
+class WMGrabEvent : public WMWindowEvent
+{
+public:
+    WMGrabEvent(QQuickWindow *c, QImage *result) : WMWindowEvent(c, WM_Grab), image(result) {}
+    QImage *image;
+};
+
 
 /*!
  * A note on wayland: Wayland receives buffer_release on the Main thread
@@ -151,35 +159,19 @@ class RenderThread : public QThread
     Q_OBJECT
 public:
 
-    enum SyncState {
-        SyncNotSpecified,
-        SyncPendingInGui,
-        SyncAcceptedInGui,
-        SyncAbortedByRender
-    };
-
-
     RenderThread(WindowManager *w)
         : wm(w)
         , gl(0)
         , sg(QSGContext::createDefaultContext())
-        , waitForGuiTime(0)
-        , pendingUpdate(false)
+        , pendingUpdate(0)
         , sleeping(false)
         , animationRunning(false)
-        , sceneChanged(false)
+        , guiIsLocked(false)
         , shouldExit(false)
         , allowMainThreadProcessing(true)
-        , inSync(true)
-        , syncState(SyncNotSpecified)
+        , animationRequestsPending(0)
     {
         sg->moveToThread(this);
-
-        waitForGuiTime = get_env_int("QML_RENDERLOOP_WAIT_FOR_GUI_TIME", 5);
-
-#ifdef CUSTOMCONTEXT_DEBUG
-        qDebug("CustomContext: setting GUI wait to %d ms", waitForGuiTime);
-#endif
     }
 
 
@@ -192,65 +184,48 @@ public:
     void syncAndRender();
     void sync();
 
-    void lockGuiFromRender(QEvent::Type eventType)
+    void requestRepaint()
     {
-        mutex.lock();
-        allowMainThreadProcessing = false;
-        QCoreApplication::postEvent(wm, new QEvent(eventType));
-        waitCondition.wait(&mutex);
-    }
-
-    void unlockGuiFromRender()
-    {
-        waitCondition.wakeOne();
-        allowMainThreadProcessing = true;
-        mutex.unlock();
+        if (sleeping)
+            exit();
+        if (m_windows.size() > 0)
+            pendingUpdate |= RepaintRequest;
     }
 
 public slots:
     void animationStarted() {
-        WMDEBUG("    Render: animations started...");
+        WMDEBUG("    Render: animationStarted()");
         animationRunning = true;
         if (sleeping)
             exit();
     }
 
     void animationStopped() {
-        WMDEBUG("    Render: animations stopped...");
+        WMDEBUG("    Render: animationStopped()");
         animationRunning = false;
     }
 
-    void sceneWasChanged() {
-        sceneChanged = true;
-    }
-
-
-
-
 public:
+    enum UpdateRequest {
+        SyncRequest         = 0x01,
+        RepaintRequest      = 0x02
+    };
+
     WindowManager *wm;
     QOpenGLContext *gl;
     QSGContext *sg;
 
     QEventLoop eventLoop;
 
-    int waitForGuiTime;
-
-    uint pendingUpdate : 1;
+    uint pendingUpdate : 2;
     uint sleeping : 1;
     uint animationRunning : 1;
-    uint sceneChanged : 1;
 
-    // New canvas has been added, we must perform a full sync in order for
-    // the renderer to be created and the initial scene graph built.
-    uint canvasAdded : 1;
-
+    volatile bool guiIsLocked;
     volatile bool shouldExit;
 
-
     volatile bool allowMainThreadProcessing;
-    volatile bool inSync : 1;
-    volatile SyncState syncState;
+    volatile int animationRequestsPending;
 
     QMutex mutex;
     QWaitCondition waitCondition;
@@ -260,7 +235,6 @@ public:
     struct Window {
         QQuickWindow *window;
         QSize size;
-        uint sceneChanged : 1;
     };
     QList<Window> m_windows;
 };
@@ -270,31 +244,26 @@ bool RenderThread::event(QEvent *e)
     switch ((int) e->type()) {
 
     case WM_Show: {
-        WMDEBUG1("    Render: got show event");
+        WMDEBUG1("    Render: WM_Show");
         WMShowEvent *se = static_cast<WMShowEvent *>(e);
 
         if (windowFor(m_windows, se->window)) {
-            WMDEBUG1("    Render: window already added...");
+            WMDEBUG1("    Render:  - window already added...");
             return true;
         }
 
         Window window;
         window.window = se->window;
         window.size = se->size;
-        window.sceneChanged = true;
         m_windows << window;
-        pendingUpdate = true;
-        canvasAdded  = true;
-        if (sleeping)
-            exit();
         return true; }
 
     case WM_Hide: {
-        WMDEBUG1("    Render: got hide..");
-        WMwindowEvent *ce = static_cast<WMwindowEvent *>(e);
+        WMDEBUG1("    Render: WM_Hide");
+        WMWindowEvent *ce = static_cast<WMWindowEvent *>(e);
         for (int i=0; i<m_windows.size(); ++i) {
             if (m_windows.at(i).window == ce->window) {
-                WMDEBUG1("    Render: removed one...");
+                WMDEBUG1("    Render:  - removed one...");
                 m_windows.removeAt(i);
                 break;
             }
@@ -306,47 +275,50 @@ bool RenderThread::event(QEvent *e)
         return true; }
 
     case WM_RequestSync:
-        WMDEBUG("    Render: got sync request event");
+        WMDEBUG("    Render: WM_RequestSync");
         if (sleeping)
             exit();
-        pendingUpdate = true;
+        if (m_windows.size() > 0)
+            pendingUpdate |= SyncRequest;
         return true;
 
-    case WM_NotifyDoneRender:
-        WMDEBUG1("    Render: got notify done render");
-        // By the time the notify render is handled, we are done rendering so
-        // we just need to ping-pong the event back to the wm...
-        QCoreApplication::postEvent(wm, new QEvent(WM_NotifyDoneRender));
-        return true;
+    case WM_Resize: {
+        WMDEBUG("    Render: WM_Resize");
+        WMResizeEvent *re = static_cast<WMResizeEvent *>(e);
+        Window *w = windowFor(m_windows, re->window);
+        w->size = re->size;
+        // No need to wake up here as we will get a sync shortly.. (see WindowManager::resize());
+        return true; }
 
     case WM_TryRelease:
-        WMDEBUG1("    Render: got request to release resources");
+        WMDEBUG1("    Render: WM_TryRelease");
+        mutex.lock();
         if (m_windows.size() == 0) {
-            lockGuiFromRender(WM_EnterWait);
-            WMDEBUG1("    Render: setting exit flag and invalidating GL");
+            WMDEBUG1("    Render:  - setting exit flag and invalidating GL");
             shouldExit = true;
-            invalidateOpenGL(static_cast<WMwindowEvent *>(e)->window);
+            invalidateOpenGL(static_cast<WMWindowEvent *>(e)->window);
             if (sleeping)
                 exit();
-            unlockGuiFromRender();
         } else {
-            WMDEBUG1("    Render: not releasing anything because we have active windows...");
+            WMDEBUG1("    Render:  - not releasing anything because we have active windows...");
         }
-        QCoreApplication::postEvent(wm, new QEvent(WM_ReleaseHandled));
+        waitCondition.wakeOne();
+        mutex.unlock();
         return true;
 
     case WM_Grab: {
-        WMDEBUG1("    Render: got grab event");
-        WMwindowEvent *ce = static_cast<WMwindowEvent *>(e);
+        WMDEBUG1("    Render: WM_Grab");
+        WMGrabEvent *ce = static_cast<WMGrabEvent *>(e);
         Window *w = windowFor(m_windows, ce->window);
-        QImage grabbed;
         if (w) {
             gl->makeCurrent(ce->window);
             QQuickWindowPrivate::get(ce->window)->renderSceneGraph(w->size);
-            grabbed = qt_gl_read_framebuffer(w->size, false, false);
+            *ce->image = qt_gl_read_framebuffer(w->size, false, false);
         }
-        WMDEBUG1("    Render: posting grab result back to GUI");
-        QCoreApplication::postEvent(wm, new WMGrabResultEvent(ce->window, grabbed));
+        WMDEBUG1("    Render:  - waking gui to handle grab result");
+        mutex.lock();
+        waitCondition.wakeOne();
+        mutex.unlock();
         return true;
     }
 
@@ -358,7 +330,7 @@ bool RenderThread::event(QEvent *e)
 
 void RenderThread::invalidateOpenGL(QQuickWindow *window)
 {
-    WMDEBUG1("    Render: trying to invalidate OpenGL");
+    WMDEBUG1("    Render: invalidateOpenGL()");
 
     if (!gl)
         return;
@@ -370,7 +342,7 @@ void RenderThread::invalidateOpenGL(QQuickWindow *window)
 
     // We're not doing any cleanup in this case...
     if (window->isPersistentSceneGraph()) {
-        WMDEBUG1("    Render: persistent SG, avoiding cleanup");
+        WMDEBUG1("    Render:  - persistent SG, avoiding cleanup");
         return;
     }
 
@@ -381,21 +353,34 @@ void RenderThread::invalidateOpenGL(QQuickWindow *window)
 
     sg->invalidate();
     gl->doneCurrent();
-    WMDEBUG1("    Render: invalidated scenegraph..");
+    WMDEBUG1("    Render:  - invalidated scenegraph..");
 
     if (!window->isPersistentOpenGLContext()) {
         delete gl;
         gl = 0;
-        WMDEBUG1("    Render: invalidated OpenGL");
+        WMDEBUG1("    Render:  - invalidated OpenGL");
     } else {
-        WMDEBUG1("    Render: persistent GL, avoiding cleanup");
+        WMDEBUG1("    Render:  - persistent GL, avoiding cleanup");
     }
 }
 
 void RenderThread::initializeOpenGL()
 {
-    WMDEBUG1("    Render: initializing OpenGL");
-    QQuickWindow *win = m_windows.at(0).window;
+    WMDEBUG1("    Render: initializeOpenGL()");
+    QWindow *win = m_windows.at(0).window;
+    bool temp = false;
+
+    // Workaround for broken expose logic... We should not get an
+    // expose when the size of a window is invalid, but we sometimes do.
+    // On Mac this leads to harmless, yet annoying, console warnings
+    if (m_windows.at(0).size.isEmpty()) {
+        temp = true;
+        win = new QWindow();
+        win->setFormat(m_windows.at(0).window->requestedFormat());
+        win->setSurfaceType(QWindow::OpenGLSurface);
+        win->setGeometry(0, 0, 64, 64);
+        win->create();
+    }
 
     gl = new QOpenGLContext();
     // Pick up the surface format from one of them
@@ -404,6 +389,10 @@ void RenderThread::initializeOpenGL()
     if (!gl->makeCurrent(win))
         qWarning("QQuickWindow: makeCurrent() failed...");
     sg->initialize(gl);
+
+    if (temp) {
+        delete win;
+    }
 }
 
 /*!
@@ -414,47 +403,27 @@ void RenderThread::initializeOpenGL()
  */
 void RenderThread::sync()
 {
-    WMDEBUG("    Render: about to lock for sync");
+    WMDEBUG("    Render: sync()");
     mutex.lock();
-    allowMainThreadProcessing = false;
-    syncState = SyncPendingInGui;
 
-    WMDEBUG("    Render: posting WM_SyncAndAdvance to GUI");
-    QCoreApplication::postEvent(wm, new QEvent(WM_LockAndSync));
-    waitCondition.wait(&mutex, canvasAdded ? 99999 : waitForGuiTime);
+    Q_ASSERT_X(guiIsLocked, "RenderThread::sync()", "sync triggered on bad terms as gui is not already locked...");
+    pendingUpdate = 0;
 
-    // Gui thread did not process the event in time, so abort it...
-    if (syncState == SyncPendingInGui) {
-        WMDEBUG("    Render: aborting...");
-        syncState = SyncAbortedByRender;
-    }
-    pendingUpdate = false;
-
-    if (syncState == SyncAcceptedInGui) {
-        WMDEBUG("    Render: performing sync");
-        inSync = true;
-        for (int i=0; i<m_windows.size(); ++i) {
-            Window &w = const_cast<Window &>(m_windows.at(i));
-            gl->makeCurrent(w.window);
-            QQuickWindowPrivate *d = QQuickWindowPrivate::get(w.window);
-
-            bool hasRenderer = d->renderer != 0;
-            sceneChanged = !hasRenderer || wm->checkAndResetForceUpdate(w.window);
-            d->syncSceneGraph(); // May trigger sceneWasChanged...
-            w.sceneChanged |= sceneChanged;
-
-            // If there was no renderer before, this was the first render pass and
-            // we register for the sceneGraphChanged signal..
-            if (!hasRenderer)
-                connect(d->renderer, SIGNAL(sceneGraphChanged()), this, SLOT(sceneWasChanged()));
-
-            canvasAdded = false;
+    for (int i=0; i<m_windows.size(); ++i) {
+        Window &w = const_cast<Window &>(m_windows.at(i));
+        if (w.size.width() == 0 || w.size.height() == 0) {
+            WMDEBUG("    Render:  - window has bad size, waiting...");
+            continue;
         }
-        inSync = false;
+        gl->makeCurrent(w.window);
+        QQuickWindowPrivate *d = QQuickWindowPrivate::get(w.window);
+        d->syncSceneGraph();
     }
 
-    WMDEBUG("    Render: unlocking after sync");
-    unlockGuiFromRender();
+    WMDEBUG("    Render:  - unlocking after sync");
+
+    waitCondition.wakeOne();
+    mutex.unlock();
 }
 
 
@@ -464,20 +433,19 @@ void RenderThread::syncAndRender()
     if (qquick_window_timing)
         sinceLastTime = threadTimer.restart();
 #endif
-    WMDEBUG("    Render: Sync & Render")
+    WMDEBUG("    Render: syncAndRender()");
 
-    bool updateWasPending = pendingUpdate;
-
-    if (pendingUpdate)
-        sync();
-
-    // Posting animation request to GUI, but only if it is currently alive and
-    // kicking, otherwise we would pile up events and the animation system
-    // would spend a lot of time advancing in addition to the predictive times
-    // being way off.
-    if (animationRunning && syncState == SyncAcceptedInGui) {
-        WMDEBUG("    Render: posting animate to gui..");
+    // This animate request will get there after the sync
+    if (animationRunning && animationRequestsPending < 2) {
+        WMDEBUG("    Render:  - posting animate to gui..");
+        ++animationRequestsPending;
         QCoreApplication::postEvent(wm, new QEvent(WM_AdvanceAnimations));
+
+    }
+
+    if (pendingUpdate & SyncRequest) {
+        WMDEBUG("    Render:  - update pending, doing sync");
+        sync();
     }
 
 #ifdef QQUICK_WINDOW_TIMING
@@ -488,6 +456,10 @@ void RenderThread::syncAndRender()
     for (int i=0; i<m_windows.size(); ++i) {
         Window &w = const_cast<Window &>(m_windows.at(i));
         QQuickWindowPrivate *d = QQuickWindowPrivate::get(w.window);
+        if (!d->renderer || w.size.width() == 0 || w.size.height() == 0) {
+            WMDEBUG("    Render:  - Window not yet ready, skipping render...");
+            continue;
+        }
         gl->makeCurrent(w.window);
         d->renderSceneGraph(w.size);
 #ifdef QQUICK_WINDOW_TIMING
@@ -497,11 +469,11 @@ void RenderThread::syncAndRender()
         gl->swapBuffers(w.window);
         d->fireFrameSwapped();
     }
-    WMDEBUG("    Render: rendering done");
+    WMDEBUG("    Render:  - rendering done");
 
 #ifdef QQUICK_WINDOW_TIMING
         if (qquick_window_timing)
-            qDebug("window Time: sinceLast=%d, sync=%d, render=%d, swap=%d",
+            qDebug("window Time: sinceLast=%d, sync=%d, first render=%d, after final swap=%d",
                    sinceLastTime,
                    syncTime,
                    renderTime - syncTime,
@@ -511,7 +483,7 @@ void RenderThread::syncAndRender()
 
 void RenderThread::run()
 {
-    WMDEBUG1("    Render: running...");
+    WMDEBUG1("    Render: run()");
     while (!shouldExit) {
 
         // perform sync
@@ -527,8 +499,8 @@ void RenderThread::run()
         QCoreApplication::sendPostedEvents(0, QEvent::DeferredDelete);
 
         if (!shouldExit
-            && ((!animationRunning && !pendingUpdate) || m_windows.size() == 0)) {
-            WMDEBUG("    Render: going to sleep...")
+            && ((!animationRunning && pendingUpdate == 0) || m_windows.size() == 0)) {
+            WMDEBUG("    Render: enter event loop (going to sleep)");
             sleeping = true;
             exec();
             sleeping = false;
@@ -536,23 +508,21 @@ void RenderThread::run()
 
     }
 
-    if (gl) {
-        WMDEBUG1("    Render: we have a GL context when shutting down... eeek...");
-    }
+    Q_ASSERT_X(!gl, "RenderThread::run()", "The OpenGL context should be cleaned up before exiting the render thread...");
 
-    WMDEBUG1("    Render: exited..");
+    WMDEBUG1("    Render: rund() completed...");
 }
 
 WindowManager::WindowManager()
-    : renderPassScheduled(false)
-    , renderPassDone(false)
-    , m_animation_timer(0)
-    , m_releases_requested(0)
+    : m_animation_timer(0)
+    , m_update_timer(0)
 {
     m_thread = new RenderThread(this);
     m_thread->moveToThread(m_thread);
 
     m_animation_driver = m_thread->sg->createAnimationDriver(this);
+
+    m_exhaust_delay = get_env_int("QML_EXHAUST_DELAY", 5);
 
     connect(m_animation_driver, SIGNAL(started()), m_thread, SLOT(animationStarted()));
     connect(m_animation_driver, SIGNAL(stopped()), m_thread, SLOT(animationStopped()));
@@ -560,7 +530,7 @@ WindowManager::WindowManager()
     connect(m_animation_driver, SIGNAL(stopped()), this, SLOT(animationStopped()));
 
     m_animation_driver->install();
-    WMDEBUG1("GUI: window manager created...");
+    WMDEBUG1("GUI: WindowManager() created");
 }
 
 QSGContext *WindowManager::sceneGraphContext() const
@@ -580,14 +550,14 @@ bool WindowManager::anyoneShowing()
 
 void WindowManager::animationStarted()
 {
-    WMDEBUG("GUI: animations started");
+    WMDEBUG("GUI: animationStarted()");
     if (!anyoneShowing() && m_animation_timer == 0)
         m_animation_timer = startTimer(NON_VISUAL_TIMER_INTERVAL);
 }
 
 void WindowManager::animationStopped()
 {
-    WMDEBUG("GUI: animations stopped");
+    WMDEBUG("GUI: animationStopped()");
     if (!anyoneShowing()) {
         killTimer(m_animation_timer);
         m_animation_timer = 0;
@@ -606,8 +576,6 @@ void WindowManager::show(QQuickWindow *window)
     Window win;
     win.window = window;
     win.pendingUpdate = false;
-    win.pendingExpose = false;
-    win.pendingForceUpdate = true;
     m_windows << win;
 }
 
@@ -623,13 +591,14 @@ void WindowManager::hide(QQuickWindow *window)
     if (window->isExposed())
         handleObscurity(window);
 
+    releaseResources();
+
     for (int i=0; i<m_windows.size(); ++i) {
         if (m_windows.at(i).window == window) {
             m_windows.removeAt(i);
             break;
         }
     }
-
 }
 
 
@@ -645,18 +614,9 @@ void WindowManager::windowDestroyed(QQuickWindow *window)
     if (!m_thread->isRunning())
         return;
 
-    renderPassDone = false;
-
-    handleObscurity(window);
-    releaseResources();
     hide(window);
-    waitForReleaseComplete();
-    while (m_windows.size() == 0 && m_thread->isRunning()) {
-        RenderThread::msleep(1);
-        QCoreApplication::processEvents();
-    }
 
-    WMDEBUG1("GUI: done with windowDestroyed()");
+    WMDEBUG1("GUI:  - done with windowDestroyed()");
 }
 
 
@@ -685,11 +645,6 @@ void WindowManager::exposureChanged(QQuickWindow *window)
 void WindowManager::handleExposure(QQuickWindow *window)
 {
     WMDEBUG1("GUI: handleExposure");
-    if (m_releases_requested) {
-        WMDEBUG1("GUI: --- using workaround");
-        windowFor(m_windows, window)->pendingExpose = true;
-        return;
-    }
 
     // Because we are going to bind a GL context to it, make sure it
     // is created.
@@ -697,11 +652,6 @@ void WindowManager::handleExposure(QQuickWindow *window)
         window->create();
 
     QCoreApplication::postEvent(m_thread, new WMShowEvent(window));
-
-    // If the render thread is about to shut down, wait for it to
-    // finish before trying to restart it..
-    while (m_thread->shouldExit && m_thread->isRunning())
-        RenderThread::yieldCurrentThread();
 
     // Start render thread if it is not running
     if (!m_thread->isRunning()) {
@@ -714,6 +664,8 @@ void WindowManager::handleExposure(QQuickWindow *window)
     } else {
         WMDEBUG1("GUI: - render thread already running");
     }
+
+    polishAndSync();
 
     // Kill non-visual animation timer if it is running
     if (m_animation_timer) {
@@ -729,23 +681,12 @@ void WindowManager::handleExposure(QQuickWindow *window)
  *
  * It also starts up the non-vsync animation tick if no more windows
  * are showing.
- *
- * If we are waiting for a releaseResources, the render thread could be
- * in a state of shutting down, so we only register that this window has
- * an exposure change which we will replay later when the render thread
- * is in a more predictable state.
  */
 void WindowManager::handleObscurity(QQuickWindow *window)
 {
     WMDEBUG1("GUI: handleObscurity");
-    if (m_releases_requested) {
-        WMDEBUG1("GUI: --- using workaround");
-        windowFor(m_windows, window)->pendingExpose = true;
-        return;
-    }
-
     if (m_thread->isRunning())
-        QCoreApplication::postEvent(m_thread, new WMwindowEvent(window, WM_Hide));
+        QCoreApplication::postEvent(m_thread, new WMWindowEvent(window, WM_Hide));
 
     if (!anyoneShowing() && m_animation_driver->isRunning() && m_animation_timer == 0) {
         m_animation_timer = startTimer(NON_VISUAL_TIMER_INTERVAL);
@@ -759,25 +700,33 @@ void WindowManager::handleObscurity(QQuickWindow *window)
  */
 void WindowManager::maybeUpdate(QQuickWindow *window)
 {
-    if (QThread::currentThread() == m_thread) {
-        WMDEBUG("GUI: maybeUpdate on render thread...");
-        m_thread->pendingUpdate = true;
-        return;
-    }
+    Q_ASSERT_X(QThread::currentThread() == QCoreApplication::instance()->thread() || m_thread->guiIsLocked,
+               "QQuickItem::update()",
+               "Function can only be called from GUI thread or during QQuickItem::updatePaintNode()");
 
     WMDEBUG("GUI: maybeUpdate...");
     Window *w = windowFor(m_windows, window);
-    if (!w || w->pendingUpdate || !m_thread->isRunning())
+    if (!w || w->pendingUpdate || !m_thread->isRunning()) {
         return;
+    }
+
+    // Call this function from the Gui thread later as startTimer cannot be
+    // called from the render thread.
+    if (QThread::currentThread() == m_thread) {
+        WMDEBUG("GUI:  - on render thread, posting update later");
+        QCoreApplication::postEvent(this, new WMWindowEvent(window, WM_UpdateLater));
+        return;
+    }
+
 
     w->pendingUpdate = true;
 
-    if (renderPassScheduled)
+    if (m_update_timer > 0) {
         return;
-    renderPassScheduled = true;
+    }
 
-    WMDEBUG("GUI: posting update");
-    QCoreApplication::postEvent(m_thread, new QEvent(WM_RequestSync));
+    WMDEBUG("GUI:  - posting update");
+    m_update_timer = startTimer(m_exhaust_delay, Qt::PreciseTimer);
 }
 
 /*!
@@ -787,33 +736,12 @@ void WindowManager::update(QQuickWindow *window)
 {
     if (QThread::currentThread() == m_thread) {
         WMDEBUG("Gui: update called on render thread");
-        RenderThread::Window *w = windowFor(m_thread->m_windows, window);
-        if (w) {
-            w->sceneChanged = true;
-            m_thread->pendingUpdate = true;
-        }
+        m_thread->requestRepaint();
         return;
     }
 
     WMDEBUG("Gui: update called");
     maybeUpdate(window);
-    Window *w = windowFor(m_windows, window);
-    w->pendingForceUpdate = true;
-}
-
-
-/*!
- * Called from the render thread, while GUI is blocked to check if
- * there is a pending explicit update on this window.
- */
-bool WindowManager::checkAndResetForceUpdate(QQuickWindow *window)
-{
-    Window *w = windowFor(m_windows, window);
-    if (!w)
-        return false;
-    bool force = w->pendingForceUpdate;
-    w->pendingForceUpdate = false;
-    return force;
 }
 
 
@@ -823,65 +751,72 @@ volatile bool *WindowManager::allowMainThreadProcessing()
 }
 
 
-void WindowManager::waitForReleaseComplete()
-{
-    WMDEBUG1("GUI: waiting for release");
-    while (m_releases_requested) {
-        RenderThread::yieldCurrentThread();
-        QCoreApplication::processEvents();
-    }
-    WMDEBUG1("GUI: done waiting for release");
-}
-
-
-void WindowManager::replayDelayedEvents()
-{
-    WMDEBUG1("GUI: replaying delayed events");
-    for (int i=0; i<m_windows.size(); ++i) {
-        Window &w = const_cast<Window &>(m_windows.at(i));
-        if (w.window->isExposed())
-            handleExposure(w.window);
-        else
-            handleObscurity(w.window);
-        w.pendingExpose = false;
-    }
-    WMDEBUG1("GUI: done replaying delayed events");
-}
-
 /*!
  * Release resources will post an event to the render thread to
  * free up the SG and GL resources and exists the render thread.
- * It also increments the m_releases_requested, which is used to
- * to track if the render thread is in a state of "potentially
- * shutting down". When the release event has been handled in the
- * render thread, it posts a WM_ReleaseHandled back to GUI.
- * This counter is used in expose and obscure to decide if
- *  it is safe to start / stop the thread.
  */
 void WindowManager::releaseResources()
 {
     WMDEBUG1("GUI: releaseResources requested...");
 
-    bool shuttingDown = false;
     m_thread->mutex.lock();
-    shuttingDown = m_thread->shouldExit;
-    m_thread->mutex.unlock();
-
-    if (m_thread->isRunning() && m_windows.size() && !shuttingDown) {
-        WMDEBUG1("GUI: posting release request to render thread");
-        QCoreApplication::postEvent(m_thread, new WMwindowEvent(m_windows.at(0).window, WM_TryRelease));
-        ++m_releases_requested;
+    if (m_thread->isRunning() && m_windows.size() && !m_thread->shouldExit) {
+        WMDEBUG1("GUI:  - posting release request to render thread");
+        QCoreApplication::postEvent(m_thread, new WMWindowEvent(m_windows.at(0).window, WM_TryRelease));
+        m_thread->waitCondition.wait(&m_thread->mutex);
     }
+    m_thread->mutex.unlock();
 }
 
-static void wakeAndWait(RenderThread *t)
+void WindowManager::polishAndSync()
 {
-    WMDEBUG("GUI: locking in gui");
-    t->mutex.lock();
-    t->waitCondition.wakeOne();
-    WMDEBUG("GUI: woke up render, now waiting...");
-    t->waitCondition.wait(&t->mutex);
-    t->mutex.unlock();
+    if (!anyoneShowing())
+        return;
+
+#ifdef QQUICK_WINDOW_TIMING
+    QElapsedTimer timer;
+    int polishTime;
+    int waitTime;
+    if (qquick_window_timing)
+        timer.start();
+#endif
+    WMDEBUG("GUI: polishAndSync()");
+    // Polish as the last thing we do before we allow the sync to take place
+    for (int i=0; i<m_windows.size(); ++i) {
+        const Window &w = m_windows.at(i);
+        QQuickWindowPrivate *d = QQuickWindowPrivate::get(w.window);
+        d->polishItems();
+    }
+#ifdef QQUICK_WINDOW_TIMING
+    if (qquick_window_timing)
+        polishTime = timer.elapsed();
+#endif
+
+    WMDEBUG("GUI:  - clearing update flags...");
+    for (int i=0; i<m_windows.size(); ++i) {
+        m_windows[i].pendingUpdate = false;
+    }
+
+    WMDEBUG("GUI:  - lock for sync...");
+    m_thread->mutex.lock();
+    m_thread->guiIsLocked = true;
+    QEvent *event = new QEvent(WM_RequestSync);
+
+    QCoreApplication::postEvent(m_thread, event);
+    WMDEBUG("GUI:  - wait for sync...");
+#ifdef QQUICK_WINDOW_TIMING
+    if (qquick_window_timing)
+        waitTime = timer.elapsed();
+#endif
+    m_thread->waitCondition.wait(&m_thread->mutex);
+    m_thread->guiIsLocked = false;
+    m_thread->mutex.unlock();
+    WMDEBUG("GUI:  - unlocked after sync...");
+
+#ifdef QQUICK_WINDOW_TIMING
+    if (qquick_window_timing)
+        qDebug(" - polish=%d, wait=%d, sync=%d", polishTime, waitTime - polishTime, int(timer.elapsed() - waitTime));
+#endif
 }
 
 bool WindowManager::event(QEvent *e)
@@ -890,106 +825,39 @@ bool WindowManager::event(QEvent *e)
 
     case QEvent::Timer:
         if (static_cast<QTimerEvent *>(e)->timerId() == m_animation_timer) {
-            WMDEBUG("Gui: ticking non-visual animation");
+            WMDEBUG("Gui: QEvent::Timer -> non-visual animation");
             m_animation_driver->advance();
+        } else if (static_cast<QTimerEvent *>(e)->timerId() == m_update_timer) {
+            WMDEBUG("Gui: QEvent::Timer -> polishAndSync()");
+            killTimer(m_update_timer);
+            m_update_timer = 0;
+            polishAndSync();
         }
-        break;
-
-    case WM_EnterWait:
-        WMDEBUG("GUI: got request to enter wait");
-        wakeAndWait(m_thread);
-        break;
-
-    case WM_LockAndSync: {
-#ifdef QQUICK_WINDOW_TIMING
-        QElapsedTimer timer;
-        int polishTime;
-        if (qquick_window_timing)
-            timer.start();
-#endif
-        WMDEBUG("GUI: got sync and animate request, polishing");
-        // Polish as the last thing we do before we allow the sync to take place
-        for (int i=0; i<m_windows.size(); ++i) {
-            const Window &w = m_windows.at(i);
-            QQuickWindowPrivate *d = QQuickWindowPrivate::get(w.window);
-            d->polishItems();
-        }
-#ifdef QQUICK_WINDOW_TIMING
-        if (qquick_window_timing)
-            polishTime = timer.elapsed();
-#endif
-
-        bool aborted = false;
-        m_thread->mutex.lock();
-
-        if (m_thread->syncState == RenderThread::SyncPendingInGui) {
-            m_thread->syncState = RenderThread::SyncAcceptedInGui;
-
-            // The lock down the GUI thread and wake render for doing the sync
-            m_thread->waitCondition.wakeOne();
-            WMDEBUG("GUI: woke up render, now waiting...");
-            m_thread->waitCondition.wait(&m_thread->mutex);
-
-            WMDEBUG("GUI: done with the waiting...");
-
-        } else {
-            WMDEBUG("GUI: sync aborted...")
-                    aborted = true;
-        }
-        m_thread->mutex.unlock();
-
-        WMDEBUG("GUI: clearing update flags...");
-        renderPassScheduled = false;
-        for (int i=0; i<m_windows.size(); ++i) {
-            m_windows[i].pendingUpdate = false;
-        }
-
-        if (aborted) {
-            // Force another sync-round since this one is aborted..
-            if (m_windows.size())
-                maybeUpdate(m_windows.at(0).window);
-        }
-
-#ifdef QQUICK_CANVAS_TIMING
-        if (qquick_canvas_timing)
-            qDebug(" - polish=%d aborted=%s", polishTime, aborted ? "yes" : "no");
-#endif
-        WMDEBUG("GUI: sync done...");
         return true;
-    }
+
+    case WM_UpdateLater: {
+        QQuickWindow *window = static_cast<WMWindowEvent *>(e)->window;
+        // The window might have gone away...
+        if (windowFor(m_windows, window))
+            maybeUpdate(window);
+        return true; }
 
     case WM_AdvanceAnimations:
-        WMDEBUG("GUI: got animate request..");
+        --m_thread->animationRequestsPending;
+        WMDEBUG("GUI: WM_AdvanceAnimations");
         if (m_animation_driver->isRunning()) {
 #ifdef QQUICK_CANVAS_TIMING
             QElapsedTimer timer;
             timer.start();
 #endif
             m_animation_driver->advance();
-            WMDEBUG("GUI: animations advanced..");
+            WMDEBUG("GUI:  - animations advanced..");
 #ifdef QQUICK_CANVAS_TIMING
             if (qquick_canvas_timing)
                 qDebug(" - animation: %d", (int) timer.elapsed());
 #endif
         }
         return true;
-
-
-    case WM_NotifyDoneRender:
-        WMDEBUG("GUI: render done notification...");
-        renderPassDone = true;
-        return true;
-
-    case WM_GrabResult: {
-        WMGrabResultEvent *ge = static_cast<WMGrabResultEvent *>(e);
-        m_grab_results[ge->window] = ge->result;
-        return true; }
-
-    case WM_ReleaseHandled:
-        m_releases_requested--;
-        if (m_releases_requested == 0)
-            replayDelayedEvents();
-        break;
 
     default:
         break;
@@ -1001,33 +869,42 @@ bool WindowManager::event(QEvent *e)
 
 QImage WindowManager::grab(QQuickWindow *window)
 {
+    WMDEBUG1("GUI: grab");
     if (!m_thread->isRunning())
         return QImage();
 
     if (!window->handle())
         window->create();
 
-    waitForReleaseComplete();
+    QImage result;
+    m_thread->mutex.lock();
+    QCoreApplication::postEvent(m_thread, new WMGrabEvent(window, &result));
+    m_thread->waitCondition.wait(&m_thread->mutex);
+    m_thread->mutex.unlock();
 
-    QCoreApplication::postEvent(m_thread, new WMwindowEvent(window, WM_Grab));
-
-    while (!m_grab_results.contains(window)) {
-        RenderThread::msleep(10);
-        QCoreApplication::processEvents();
-    }
-
-    QImage result = m_grab_results[window];
-    m_grab_results.remove(window);
     return result;
 }
 
 void WindowManager::wakeup()
 {
-    if (!m_thread->isRunning() || !m_windows.size())
-        return;
-
-    maybeUpdate(m_windows.at(0).window);
 }
 
+void WindowManager::resize(QQuickWindow *w, const QSize &size)
+{
+    WMDEBUG1("GUI: resize");
+
+    if (!m_thread->isRunning() || !m_windows.size() || !w->isExposed() || windowFor(m_windows, w) == 0) {
+        return;
+    }
+
+    if (size.width() == 0 || size.height() == 0)
+        return;
+
+    WMDEBUG("GUI:  - posting resize event...");
+    WMResizeEvent *e = new WMResizeEvent(w, size);
+    QCoreApplication::postEvent(m_thread, e);
+
+    polishAndSync();
+}
 
 #include "windowmanager.moc"

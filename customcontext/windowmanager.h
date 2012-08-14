@@ -67,7 +67,7 @@ public:
 
     QImage grab(QQuickWindow *);
 
-    void resize(QQuickWindow *, const QSize &) { }
+    void resize(QQuickWindow *, const QSize &);
 
     void update(QQuickWindow *window);
     void maybeUpdate(QQuickWindow *window);
@@ -93,26 +93,21 @@ private:
     void initialize();
 
     void waitForReleaseComplete();
-    void replayDelayedEvents();
+
+    void polishAndSync();
 
     struct Window {
         QQuickWindow *window;
         uint pendingUpdate : 1;
-        uint pendingExpose : 1;
-        uint pendingForceUpdate : 1;
     };
 
     RenderThread *m_thread;
     QAnimationDriver *m_animation_driver;
     QList<Window> m_windows;
 
-    QHash<QQuickWindow *, QImage> m_grab_results;
-
-    uint renderPassScheduled : 1;
-    uint renderPassDone : 1;
-
     int m_animation_timer;
-    int m_releases_requested;
+    int m_update_timer;
+    int m_exhaust_delay;
 };
 
 #endif // WINDOWMANAGER_H
