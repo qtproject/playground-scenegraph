@@ -1316,14 +1316,25 @@ void Renderer::updateElementTransform(RenderElement *__restrict e, const QMatrix
 
         if (e->complexTransform) {
 #endif
-            QVector3D localMin(e->localRect.minPoint.x, e->localRect.minPoint.y, 0.0f);
-            QVector3D localMax(e->localRect.maxPoint.x, e->localRect.maxPoint.y, 0.0f);
-            QVector3D worldP0 = (*mat) * localMin;
-            QVector3D worldP1 = (*mat) * localMax;
-            e->worldRect.minPoint.x = qMin(worldP0.x(), worldP1.x());
-            e->worldRect.minPoint.y = qMin(worldP0.y(), worldP1.y());
-            e->worldRect.maxPoint.x = qMax(worldP0.x(), worldP1.x());
-            e->worldRect.maxPoint.y = qMax(worldP0.y(), worldP1.y());
+            QPointF localMin(e->localRect.minPoint.x, e->localRect.minPoint.y);
+            QPointF localMax(e->localRect.maxPoint.x, e->localRect.maxPoint.y);
+            QPointF worldP0 = (*mat) * localMin;
+            QPointF worldP1 = (*mat) * localMax;
+
+            if (worldP0.x() < worldP1.x()) {
+                e->worldRect.minPoint.x = worldP0.x();
+                e->worldRect.maxPoint.x = worldP1.x();
+            } else {
+                e->worldRect.minPoint.x = worldP1.x();
+                e->worldRect.maxPoint.x = worldP0.x();
+            }
+            if (worldP0.y() < worldP1.y()) {
+                e->worldRect.minPoint.y = worldP0.y();
+                e->worldRect.maxPoint.y = worldP1.y();
+            } else {
+                e->worldRect.minPoint.y = worldP1.y();
+                e->worldRect.maxPoint.y = worldP0.y();
+            }
 
 #ifndef DESKTOP_BUILD
         } else {
@@ -1362,8 +1373,8 @@ void Renderer::updateElementTransform(RenderElement *__restrict e, const QMatrix
 #ifdef DESKTOP_BUILD
             float *sv = (float *) src;
             float *dv = (float *) dest;
-            QVector3D v(sv[0], sv[1], 0.0f);
-            QVector3D t = (*mat) * v;
+            QPointF v(sv[0], sv[1]);
+            QPointF t = (*mat) * v;
             dv[0] = t.x();
             dv[1] = t.y();
 #else
