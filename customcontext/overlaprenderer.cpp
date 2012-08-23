@@ -1409,6 +1409,64 @@ void Renderer::updateElementTransform(RenderElement *__restrict e, const QMatrix
     }
 }
 
+class BoundingArea
+{
+public:
+    BoundingArea()
+        : m_count(0)
+    {
+    }
+
+    static float area(const Rect &rect)
+    {
+        return (rect.maxPoint.x - rect.minPoint.x) * (rect.maxPoint.y - rect.minPoint.y);
+    }
+
+    void unite(const Rect &rect)
+    {
+        if (m_count == 0) {
+            m_count = 1;
+            m_ra = rect;
+            return;
+        }
+
+        if (m_count == 1) {
+            m_count = 2;
+            m_rb = rect;
+            return;
+        }
+
+        Rect ca = m_ra;
+        ca.unite(m_rb);
+
+        Rect cb = m_rb;
+        cb.unite(rect);
+
+        Rect ia = ca;
+        ia.intersect(rect);
+
+        Rect ib = cb;
+        ib.intersect(m_ra);
+
+        if (area(ca) + area(rect) - area(ia) > area(m_ra) + area(cb) - area(ib)) {
+            m_rb = cb;
+        } else {
+            m_ra = ca;
+            m_rb = rect;
+        }
+    }
+
+    bool intersects(const Rect &rect)
+    {
+        return (m_count > 0 && m_ra.intersects(rect)) || (m_count > 1 && m_rb.intersects(rect));
+    }
+
+private:
+    Rect m_ra;
+    Rect m_rb;
+    int m_count;
+};
+
 bool Renderer::isOverlap(int i, int j, const Rect &r)
 {
     for (int c=i ; c < j ; ++c) {
@@ -1447,11 +1505,23 @@ void Renderer::buildDrawLists()
         PROFILE_COUNTER(BatchCount, 1);
         ei->addedToBatch = true;
 
+        BoundingArea united;
+
+        int current = i + 1;
+
         short nextIndex = ei->nextInBatchConfig;
         while (nextIndex != -1) {
+            for (int j = current; j < nextIndex; ++j) {
+                RenderElement *ej = m_elementsInRenderOrder[j];
+                if (!ej->addedToBatch)
+                    united.unite(ej->worldRect);
+            }
+
+            current = nextIndex + 1;
             RenderElement *ej = m_elementsInRenderOrder[nextIndex];
+
             Q_ASSERT(ej->batchConfig != -1 && batchConfigs[ej->batchConfig].renderNode == 0);
-            if (ej->addedToBatch == false && ej->vertexCount && isOverlap(i, nextIndex, ej->worldRect) == false) {
+            if (ej->addedToBatch == false && ej->vertexCount && (!united.intersects(ej->worldRect) || !isOverlap(i + 1, nextIndex, ej->worldRect))) {
                 rb.add(ej);
                 ej->addedToBatch = true;
             }

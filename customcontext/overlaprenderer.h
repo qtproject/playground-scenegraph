@@ -208,6 +208,36 @@ struct Rect
         return xOverlap && yOverlap;
     }
 
+    Rect &unite(const Rect &r)
+    {
+        if (minPoint.x > r.minPoint.x)
+            minPoint.x = r.minPoint.x;
+        if (maxPoint.x < r.maxPoint.x)
+            maxPoint.x = r.maxPoint.x;
+        if (minPoint.y > r.minPoint.y)
+            minPoint.y = r.minPoint.y;
+        if (maxPoint.y < r.maxPoint.y)
+            maxPoint.y = r.maxPoint.y;
+        return *this;
+    }
+
+    Rect &intersect(const Rect &r)
+    {
+        if (minPoint.x < r.minPoint.x)
+            minPoint.x = r.minPoint.x;
+        if (maxPoint.x > r.maxPoint.x)
+            maxPoint.x = r.maxPoint.x;
+        if (minPoint.y < r.minPoint.y)
+            minPoint.y = r.minPoint.y;
+        if (maxPoint.y > r.maxPoint.y)
+            maxPoint.y = r.maxPoint.y;
+        if (maxPoint.x < minPoint.x)
+            maxPoint.x = minPoint.x;
+        if (maxPoint.y < minPoint.y)
+            maxPoint.y = minPoint.y;
+        return *this;
+    }
+
     void transform(const QMatrix4x4 *m, const Rect &r)
     {
         if (m) {
