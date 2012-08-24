@@ -49,6 +49,11 @@
 
 #define IMAGE_MAX_SIZE 256
 
+// "small" is defined as "char" on Windows.
+#ifdef small
+#undef small
+#endif
+
 namespace CustomContext
 {
 

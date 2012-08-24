@@ -53,8 +53,9 @@ namespace CustomContext
 
 struct DitherProgram
 {
-    DitherProgram()
-        : id_size(0)
+    DitherProgram(QOpenGLContext *context)
+        : context(context)
+        , id_size(0)
         , id_texture(0)
         , prepared(false)
     {
@@ -64,6 +65,7 @@ struct DitherProgram
     void draw(int width, int height);
 
     QOpenGLShaderProgram program;
+    QOpenGLContext *context;
     int id_size;
     GLuint id_texture;
     uint prepared : 1;

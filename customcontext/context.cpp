@@ -117,7 +117,7 @@ void DitherProgram::draw(int width, int height)
     float texData[] = { 0, 0, w, 0, 0, h, w, h };
     program.setAttributeArray(1, GL_FLOAT, texData, 2);
 
-    glActiveTexture(GL_TEXTURE0);
+    context->functions()->glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, id_texture);
 
     glBlendFunc(GL_ONE, GL_ONE);
@@ -172,7 +172,7 @@ Context::Context(QObject *parent)
 void Context::initialize(QOpenGLContext *context)
 {
 
-    dither = new DitherProgram;
+    dither = new DitherProgram(context);
 
 #if defined(EGL_WL_request_client_buffer_format) && !defined(DESKTOP_BUILD)
     EGLDisplay display = eglGetCurrentDisplay();
