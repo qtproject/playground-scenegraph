@@ -53,7 +53,7 @@
 #include <arm_neon.h>
 #endif
 
-#define ENABLE_PROFILING
+// #define ENABLE_PROFILING
 
 namespace OverlapRenderer
 {

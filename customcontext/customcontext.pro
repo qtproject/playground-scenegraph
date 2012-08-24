@@ -29,6 +29,8 @@ files.path += $$[QT_INSTALL_PLUGINS]/scenegraph
 
 INSTALLS += target files
 
+!win*:DEFINES+=ENABLE_PROFILING
+
 arm_build {
     DEFINES += USE_HALF_FLOAT
     QMAKE_CXXFLAGS += -mfp16-format=ieee -mfpu=neon
