@@ -65,7 +65,6 @@ void QSGPropertyAnimator::updateProperty(QObject *target, const QString& p)
             qreal tx = int(m_elapsed - m_startTime) % int(m_duration);
 
             switch (value.type()) {
-            case QMetaType::Float:
             case QMetaType::Double:
                 value = QVariant(m_from.toReal() + (m_to.toReal() - m_from.toReal()) * m_easing.valueForProgress(tx / m_duration));
                 break;

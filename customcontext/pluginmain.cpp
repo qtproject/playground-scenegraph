@@ -54,7 +54,7 @@ QStringList ContextPlugin::keys() const
     return QStringList() << QLatin1String("customcontext");
 }
 
-QSGContext *ContextPlugin::create(const QString &key) const
+QSGContext *ContextPlugin::create(const QString &) const
 {
     if (!instance)
         instance = new CustomContext::Context();

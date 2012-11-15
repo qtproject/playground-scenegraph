@@ -63,6 +63,7 @@ namespace OverlapRenderer
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <unistd.h>
 
 #include <QFile>
 #include <QDataStream>
@@ -80,7 +81,7 @@ public:
 
     struct ProfileBinaryWriter {
         ProfileBinaryWriter() {
-            file = new QFile(QString::fromLatin1("/tmp/%1.fullprofile").arg(::getpid()));
+            file = new QFile(QString::fromLatin1("/tmp/%1.fullprofile").arg(getpid()));
             file->open(QIODevice::WriteOnly);
             stream.setDevice(file);
         }
@@ -601,7 +602,7 @@ public:
         std::vector<Buffer>::iterator end = vertexBuffers.end();
 
         while (it != end) {
-            qFree(it->mapped);
+            free(it->mapped);
             ++it;
         }
 
@@ -609,7 +610,7 @@ public:
         end = indexBuffers.end();
 
         while (it != end) {
-            qFree(it->mapped);
+            free(it->mapped);
             ++it;
         }
     }
@@ -640,7 +641,7 @@ public:
             Buffer buffer;
             buffer.allocatedBytes = 0;
             buffer.bufferSizeInBytes = qMax((size_t)BYTES_PER_VERTEX_BUFFER, vertexByteCount);
-            buffer.mapped = (unsigned char *) qMalloc(buffer.bufferSizeInBytes);
+            buffer.mapped = (unsigned char *) malloc(buffer.bufferSizeInBytes);
             vertexBuffers.push_back(buffer);
             lockedVB = &vertexBuffers.back();
         }
@@ -648,7 +649,7 @@ public:
             Buffer buffer;
             buffer.allocatedBytes = 0;
             buffer.bufferSizeInBytes = qMax((size_t)BYTES_PER_INDEX_BUFFER, indexByteCount);
-            buffer.mapped = (unsigned char *) qMalloc(buffer.bufferSizeInBytes);
+            buffer.mapped = (unsigned char *) malloc(buffer.bufferSizeInBytes);
             indexBuffers.push_back(buffer);
             lockedIB = &indexBuffers.back();
         }
@@ -734,7 +735,7 @@ void RenderBatch::build()
         for (size_t i=0 ; i < elements.size() ; ++i) {
             RenderElement *e = elements[i];
 
-            qMemCopy(vb + currentVertexOffset * cfg->vf->stride, e->vertices, e->vertexCount * cfg->vf->stride);
+            memcpy(vb + currentVertexOffset * cfg->vf->stride, e->vertices, e->vertexCount * cfg->vf->stride);
 
             short *indexIt = (short *) (ib + currentIndexOffset * sizeof(short));
             for (int j=0 ; j < e->indexCount ; ++j)
@@ -803,9 +804,9 @@ void Renderer::removeNode(QSGNode *node)
         m_elementHash.remove(node);
 
         if (e->vertices)
-            qFree(e->vertices);
+            free(e->vertices);
         if (e->indices)
-            qFree(e->indices);
+            free(e->indices);
         delete e;
     }
 
@@ -1054,7 +1055,7 @@ void Renderer::buildRenderOrderList(QSGNode *node)
         if (matrix == 0) {
             matrix = &dummyIdentity;
         } else {
-            const qreal *__restrict md = matrix->constData();
+            const float *__restrict md = matrix->constData();
             needsMatrixForTransform = (md[3] != 0 || md[7] != 0 || md[15] != 1);
         }
 
@@ -1186,17 +1187,17 @@ void Renderer::updateElementGeometry(RenderElement *__restrict e)
 
     if (e->currentVertexBufferSize != destVertexBufferSize) {
         if (e->vertices) {
-            qFree(e->vertices);
+            free(e->vertices);
         }
         e->currentVertexBufferSize = destVertexBufferSize;
-        e->vertices = (char *) qMalloc(e->currentVertexBufferSize);
+        e->vertices = (char *) malloc(e->currentVertexBufferSize);
     }
     if (e->currentIndexBufferSize != destIndexBufferSize) {
         if (e->indices) {
-            qFree(e->indices);
+            free(e->indices);
         }
         e->currentIndexBufferSize = destIndexBufferSize;
-        e->indices = (short *) qMalloc(e->currentIndexBufferSize);
+        e->indices = (short *) malloc(e->currentIndexBufferSize);
     }
 
     // Copy vertex data
@@ -1220,7 +1221,7 @@ void Renderer::updateElementGeometry(RenderElement *__restrict e)
                     t[k] = s[k];
                 }
             } else {
-                qMemCopy(&destVertex[destAttr.byteOffset], &srcVertex[srcVertexOffset], srcAttributeSize);
+                memcpy(&destVertex[destAttr.byteOffset], &srcVertex[srcVertexOffset], srcAttributeSize);
             }
             srcVertexOffset += srcAttributeSize;
         }
@@ -1228,7 +1229,7 @@ void Renderer::updateElementGeometry(RenderElement *__restrict e)
         destVertex += e->vf->stride;
     }
 #else
-    qMemCopy(e->vertices, srcVertexData, destVertexBufferSize);
+    memcpy(e->vertices, srcVertexData, destVertexBufferSize);
 #endif
 
     // Copy index data
@@ -1240,7 +1241,7 @@ void Renderer::updateElementGeometry(RenderElement *__restrict e)
         switch (drawingMode) {
             case GL_TRIANGLES:
             case GL_LINES:
-                qMemCopy(e->indices, srcIndexData, destIndexBufferSize);
+                memcpy(e->indices, srcIndexData, destIndexBufferSize);
                 break;
             case GL_LINE_STRIP:
                 for (int i=1 ; i < srcIndexCount ; ++i) {

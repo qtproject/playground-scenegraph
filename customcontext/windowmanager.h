@@ -74,6 +74,8 @@ public:
     volatile bool *allowMainThreadProcessing();
     QSGContext *sceneGraphContext() const;
 
+    QAnimationDriver *animationDriver() const;
+
     void releaseResources();
 
     bool event(QEvent *);

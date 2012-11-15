@@ -83,7 +83,7 @@ QSGAnimatorController::QSGAnimatorController(QQuickItem *item)
     qDebug() << "QSGAnimatorController::QSGAnimatorController() VSYNC: " << m_stableVsync;
 #endif
 
-    connect(item->canvas(), SIGNAL(beforeRendering()), SLOT(advance()),Qt::DirectConnection);
+    connect(item->window(), SIGNAL(beforeRendering()), SLOT(advance()),Qt::DirectConnection);
 }
 
 QSGAnimatorController::~QSGAnimatorController()
@@ -226,7 +226,7 @@ void QSGAnimatorController::createProperties()
     int propertyCount = m_item->metaObject()->propertyCount();
     for (int i = 0; i < propertyCount; i++) {
         QString name = m_item->metaObject()->property(i).name();
-        QVariant v = m_item->property(name.toAscii().constData());
+        QVariant v = m_item->property(name.toLatin1().constData());
         QSGAnimatedProperty *p = new QSGAnimatedProperty(m_item, name, v);
         registerProperty(p);
     }

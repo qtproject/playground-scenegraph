@@ -49,3 +49,6 @@ QSGAnimatedTransform::QSGAnimatedTransform(QSGAnimatorController* , QObject* qml
 {
 }
 
+QSGAnimatedTransform::~QSGAnimatedTransform()
+{
+}

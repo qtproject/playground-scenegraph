@@ -533,6 +533,11 @@ WindowManager::WindowManager()
     WMDEBUG1("GUI: WindowManager() created");
 }
 
+QAnimationDriver *WindowManager::animationDriver() const
+{
+    return m_animation_driver;
+}
+
 QSGContext *WindowManager::sceneGraphContext() const
 {
     return m_thread->sg;

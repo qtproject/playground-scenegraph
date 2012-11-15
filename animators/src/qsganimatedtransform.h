@@ -50,6 +50,7 @@ class QSGAnimatedTransform
 {
 public:
     QSGAnimatedTransform(QSGAnimatorController *, QObject *);
+    virtual ~QSGAnimatedTransform();
     virtual void applyTo(QMatrix4x4 &) = 0;
 
 protected:

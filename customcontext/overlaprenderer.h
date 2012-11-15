@@ -187,7 +187,7 @@ struct Vec2
     {
         Vec2 r;
 
-        const qreal *m = mat.constData();
+        const float *m = mat.constData();
 
         r.x = x * m[0] + y * m[4] + m[12];
         r.y = x * m[1] + y * m[5] + m[13];

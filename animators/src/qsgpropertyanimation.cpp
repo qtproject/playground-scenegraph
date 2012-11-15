@@ -156,7 +156,7 @@ void QSGPropertyAnimation::complete()
         if (index > 0)
             p.chop(m_property.length() - index);
 
-        QVariant value = m_target->property(p.toAscii().constData());
+        QVariant value = m_target->property(p.toLatin1().constData());
 
         switch (value.type()) {
             case QMetaType::QVector3D:
@@ -207,7 +207,7 @@ void QSGPropertyAnimation::complete()
                 break;
         }
 
-        m_target->setProperty(p.toAscii().constData(), v);
+        m_target->setProperty(p.toLatin1().constData(), v);
     }
     QSGAbstractAnimation::complete();
 }

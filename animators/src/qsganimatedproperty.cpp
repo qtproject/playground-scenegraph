@@ -56,7 +56,7 @@ QSGAnimatedProperty::QSGAnimatedProperty(QObject *qmlObject, QString name, QVari
     , m_changed(false)
 {
     if (m_qmlObject)
-        m_value = m_qmlObject->property(m_name.toAscii().constData());
+        m_value = m_qmlObject->property(m_name.toLatin1().constData());
 }
 
 QSGAnimatedProperty::~QSGAnimatedProperty()
@@ -112,28 +112,28 @@ void QSGAnimatedProperty::sync()
     QString p = m_name;
     if (p.contains(".x")) {
         p = p.left(p.length() - 2);
-        QVariant v = m_qmlObject->property(p.toAscii().constData());
+        QVariant v = m_qmlObject->property(p.toLatin1().constData());
         if (v.isValid()) {
             QVector3D vec = qvariant_cast<QVector3D>(v);
             m_value = vec.x();
             qDebug() << m_name << " = " << m_value;
         }
     } else if (p.contains(".y")) {
-        QVariant v = m_qmlObject->property(p.toAscii().constData());
+        QVariant v = m_qmlObject->property(p.toLatin1().constData());
         if (v.isValid()) {
             QVector3D vec = qvariant_cast<QVector3D>(v);
             m_value = vec.y();
             qDebug() << m_name << " = " << m_value;
         }
     } else if (p.contains(".z")) {
-        QVariant v = m_qmlObject->property(p.toAscii().constData());
+        QVariant v = m_qmlObject->property(p.toLatin1().constData());
         if (v.isValid()) {
             QVector3D vec = qvariant_cast<QVector3D>(v);
             m_value = vec.z();
             qDebug() << m_name << " = " << m_value;
         }
     } else {
-        m_value = m_qmlObject->property(m_name.toAscii().constData());
+        m_value = m_qmlObject->property(m_name.toLatin1().constData());
     }
 
     m_changed = false;
