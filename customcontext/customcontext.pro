@@ -5,18 +5,73 @@ CONFIG += plugin
 
 QT += gui-private core-private quick-private qml-private v8-private
 
+
+
+verbose:{
+    message("verbose: enabled")
+    DEFINES+=CUSTOMCONTEXT_DEBUG
+} else {
+    message("verbose: disabled")
+}
+
+
+dither:{
+    message("dither: enabled")
+    DEFINES += CUSTOMCONTEXT_DITHER
+    SOURCES += renderhooks/ordereddither2x2.cpp
+    HEADERS += renderhooks/ordereddither2x2.h
+} else {
+    message("dither: disabled")
+}
+
+
+
+atlastexture:{
+    message("atlastexture: enabled")
+    DEFINES += CUSTOMCONTEXT_ATLASTEXTURE
+    SOURCES += texture/atlastexture.cpp
+    HEADERS += texture/atlastexture.h
+} else {
+    message("atlastexture: disabled")
+}
+
+
+
+animationdriver:{
+    message("animationdriver: enabled")
+    DEFINES += CUSTOMCONTEXT_ANIMATIONDRIVER
+    SOURCES += animation/animationdriver.cpp
+    HEADERS += animation/animationdriver.h
+} else {
+    message("animationdriver: disabled")
+}
+
+
+
+overlaprenderer:{
+    message("overlaprenderer: enabled")
+    DEFINES += CUSTOMCONTEXT_OVERLAPRENDERER
+    SOURCES += renderer/overlaprenderer.cpp
+    HEADERS += renderer/overlaprenderer.h
+} else {
+    message("overlaprenderer: disabled")
+}
+
+
+
+message("");
+message("Enable the above features by adding them to the qmake config, for instance:")
+message(" > qmake \"CONFIG+=verbose atlastexture dither\"");
+message("");
+
+
+
 SOURCES += \
-    animationdriver.cpp \
-    atlastexture.cpp \
     context.cpp \
-    overlaprenderer.cpp \
     pluginmain.cpp
 
 HEADERS += \
-    animationdriver.h \
-    atlastexture.h \
     context.h \
-    overlaprenderer.h \
     pluginmain.h
 
 OTHER_FILES += customcontext.json
@@ -36,4 +91,3 @@ arm_build {
     DEFINES += DESKTOP_BUILD
 }
 
-verbose:DEFINES+=CUSTOMCONTEXT_DEBUG

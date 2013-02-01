@@ -40,129 +40,78 @@
 ****************************************************************************/
 
 #include "context.h"
-#include "animationdriver.h"
-#include "overlaprenderer.h"
 
-#include "QtCore/qabstractanimation.h"
-#include <QtCore/qelapsedtimer.h>
-#include <QtCore/qmath.h>
+#include <QtGui/QWindow>
+#include <QtGui/QOpenGLContext>
 
-#ifndef DESKTOP_BUILD
-#include <EGL/egl.h>
-#include <EGL/eglext.h>
+#ifdef CUSTOMCONTEXT_ANIMATIONDRIVER
+#include "animation/animationdriver.h"
 #endif
 
-#include <QtGui>
+#ifdef CUSTOMCONTEXT_OVERLAPRENDERER
+#include "renderer/overlaprenderer.h"
+#endif
+
+
 
 namespace CustomContext
 {
 
-void DitherProgram::prepare()
-{
-    if (prepared)
-        return;
-    prepared = true;
-
-    program.addShaderFromSourceCode(QOpenGLShader::Vertex,
-                                    "attribute highp vec2 pos;\n"
-                                    "attribute highp vec2 texCoord;\n"
-                                    "varying highp vec2 tex;\n"
-                                    "void main() {\n"
-                                    "    gl_Position = vec4(pos.x, pos.y, 0, 1);\n"
-                                    "    tex = texCoord;\n"
-                                    "}");
-    program.addShaderFromSourceCode(QOpenGLShader::Fragment,
-                                    "uniform lowp sampler2D texture;"
-                                    "varying highp vec2 tex;\n"
-                                    "void main() {\n"
-                                    "    gl_FragColor = texture2D(texture, tex);\n"
-                                    "}\n");
-
-    program.bindAttributeLocation("pos", 0);
-    program.bindAttributeLocation("texCoord", 1);
-
-    program.link();
-    program.setUniformValue("texture", 0);
-
-    glGenTextures(1, &id_texture);
-    glBindTexture(GL_TEXTURE_2D, id_texture);
-
-    int data[4] = {
-        0x00000000,
-        0x02020202,
-        0x03030303,
-        0x01010101
-    };
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 2, 2, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
-
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-
-    glBindTexture(GL_TEXTURE_2D, 0);
-}
-
-void DitherProgram::draw(int width, int height)
-{
-    program.bind();
-    program.enableAttributeArray(0);
-    program.enableAttributeArray(1);
-
-    float posData[] = { -1, 1, 1, 1, -1, -1, 1, -1 };
-    program.setAttributeArray(0, GL_FLOAT, posData, 2);
-
-    float w = width/2;
-    float h = height/2;
-    float texData[] = { 0, 0, w, 0, 0, h, w, h };
-    program.setAttributeArray(1, GL_FLOAT, texData, 2);
-
-    context->functions()->glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, id_texture);
-
-    glBlendFunc(GL_ONE, GL_ONE);
-    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-
-    program.disableAttributeArray(0);
-    program.disableAttributeArray(1);
-    program.release();
-}
-
-
-
 Context::Context(QObject *parent)
     : QSGContext(parent)
-    , dither(0)
-    , samples(0)
-    , useCustomRenderer(false)
-    , useCustomAnimationDriver(false)
-    , useMultisampling(false)
+    , m_sampleCount(0)
+    , m_useMultisampling(false)
 {
-    useMultisampling = qgetenv("QML_NO_MULTISAMPLING").isEmpty();
-    if (useMultisampling) {
-        samples = 4;
-        QByteArray overrideSamples = qgetenv("QML_MULTISAMPLE_COUNT");
+    m_useMultisampling = qgetenv("CUSTOMCONTEXT_NO_MULTISAMPLE").isEmpty();
+    if (m_useMultisampling) {
+        m_sampleCount= 4;
+        QByteArray overrideSamples = qgetenv("CUSTOMCONTEXT_MULTISAMPLE_COUNT");
         bool ok;
         int override = overrideSamples.toInt(&ok);
         if (ok)
-            samples = override;
+            m_sampleCount = override;
     }
 
-    useCustomRenderer = qgetenv("QML_DEFAULT_RENDERER").isEmpty();
-    useCustomAnimationDriver = qgetenv("QML_DEFAULT_ANIMATION_DRIVER").isEmpty();
-    useDefaultTextures = !qgetenv("QML_DEFAULT_TEXTURES").isEmpty();
+#ifdef CUSTOMCONTEXT_OVERLAPRENDERER
+    m_overlapRenderer = qgetenv("CUSTOMCONTEXT_NO_OVERLAPRENDERER").isEmpty();
+#endif
 
-    useDithering = !qgetenv("QML_FULLSCREEN_DITHER").isEmpty();
+#ifdef CUSTOMCONTEXT_ANIMATIONDRIVER
+    m_animationDriver = qgetenv("CUSTOMCONTEXT_NO_ANIMATIONDRIVER").isEmpty();
+#endif
+
+#ifdef CUSTOMCONTEXT_ATLASTEXTURE
+    m_atlasTexture = qgetenv("CUSTOMCONTEXT_NO_ATLASTEXTURE").isEmpty();
+#endif
+
+#ifdef CUSTOMCONTEXT_DITHER
+    m_dither= qgetenv("CUSTOMCONTEXT_NO_DITHER").isEmpty();
+    m_ditherProgram = 0;
+#endif
 
     connect(this, SIGNAL(invalidated()), this, SLOT(handleInvalidated()));
 
+
+
 #ifdef CUSTOMCONTEXT_DEBUG
     qDebug("CustomContext created:");
-    qDebug(" - multisampling: %s, samples=%d", useMultisampling ? "yes" : "no", samples);
-    qDebug(" - renderer: %s", useCustomRenderer ? "overlap" : "default");
-    qDebug(" - animation driver: %s", useCustomAnimationDriver ? "custom" : "default");
-    qDebug(" - textures: %s", useDefaultTextures ? "default" : "atlas" );
-    qDebug(" - dithering: %s", useDithering ? "yes" : "no");
+    qDebug(" - multisampling: %s, samples=%d", m_useMultisampling ? "enabled" : "disabled", m_sampleCount);
+
+#ifdef CUSTOMCONTEXT_OVERLAPRENDERER
+    qDebug(" - overlaprenderer: %s", m_overlapRenderer ? "enabled" : "disabled");
+#endif
+
+#ifdef CUSTOMCONTEXT_ANIMATIONDRIVER
+    qDebug(" - custom animation driver: %s", m_animationDriver ? "enabled" : "disabled");
+#endif
+
+#ifdef CUSTOMCONTEXT_ATLASTEXTURE
+    qDebug(" - atlas textures: %s", m_atlasTexture ? "enabled" : "disabled" );
+#endif
+
+#ifdef CUSTOMCONTEXT_DITHER
+    qDebug(" - ordered 2x2 dither: %s", m_dither ? "enabled" : "disabled");
+#endif
 #endif
 
 }
@@ -172,22 +121,14 @@ Context::Context(QObject *parent)
 void Context::initialize(QOpenGLContext *context)
 {
 
-    dither = new DitherProgram(context);
-
-#if defined(EGL_WL_request_client_buffer_format) && !defined(DESKTOP_BUILD)
-    EGLDisplay display = eglGetCurrentDisplay();
-    const char *extensions = eglQueryString(display, EGL_EXTENSIONS);
-    if (strstr(extensions, "EGL_WL_request_client_buffer_format") != 0) {
-        eglRegisterBufferFormatCallbackWL(display, bufferFormatChanged, this);
-    }
+#ifdef CUSTOMCONTEXT_DITHER
+    if (m_dither)
+        m_ditherProgram = new OrderedDither2x2(context);
 #endif
 
 #ifdef CUSTOMCONTEXT_DEBUG
     qDebug("CustomContext: initialized..");
     qDebug(" - OpenGL extensions: %s", glGetString(GL_EXTENSIONS));
-#if defined(EGL_WL_request_client_buffer_format) && !defined(DESKTOP_BUILD)
-    qDebug(" - EGL extensions: %s\n", extensions);
-#endif
 #endif
 
     QSGContext::initialize(context);
@@ -197,73 +138,94 @@ void Context::invalidate()
 {
     QSGContext::invalidate();
 
-    delete dither;
-    dither = 0;
+#ifdef CUSTOMCONTEXT_DITHER
+    delete m_ditherProgram;
+    m_ditherProgram = 0;
+#endif
 
-    m_atlas_manager.invalidate();
+#ifdef CUSTOMCONTEXT_ATLASTEXTURE
+    m_atlasManager.invalidate();
+#endif
 }
 
-void Context::setDitherEnabled(bool enabled)
-{
-    useDithering = enabled;
-}
 
-
-QSGTexture *Context::createTexture(const QImage &image) const
-{
-    if (useDefaultTextures)
-        return QSGContext::createTexture(image);
-    else
-        return const_cast<Context *>(this)->m_atlas_manager.create(image);
-}
 
 QSurfaceFormat Context::defaultSurfaceFormat() const
 {
     QSurfaceFormat format;
     format.setStencilBufferSize(8);
-    if (useMultisampling)
-        format.setSamples(samples);
+    if (m_useMultisampling)
+        format.setSamples(m_sampleCount);
+
+    qDebug() << "returning surface format...";
+
     return format;
 }
 
+
+
+QSGTexture *Context::createTexture(const QImage &image) const
+{
+#ifdef CUSTOMCONTEXT_ATLASTEXTURE
+    if (m_atlasTexture)
+        return const_cast<Context *>(this)->m_atlasManager.create(image);
+#endif
+    return QSGContext::createTexture(image);
+}
+
+
+
 QSGRenderer *Context::createRenderer()
 {
-    if (useCustomRenderer)
+#ifdef CUSTOMCONTEXT_OVERLAPRENDERER
+    if (m_overlapRenderer)
         return new OverlapRenderer::Renderer(this);
+#endif
     return QSGContext::createRenderer();
 }
 
 
+
 QAnimationDriver *Context::createAnimationDriver(QObject *parent)
 {
-    if (useCustomAnimationDriver)
+#ifdef CUSTOMCONTEXT_ANIMATIONDRIVER
+    if (m_animationDriver)
         return new AnimationDriver();
-    else
-        return QSGContext::createAnimationDriver(parent);
+#endif
+   return QSGContext::createAnimationDriver(parent);
 }
+
 
 
 QQuickTextureFactory *Context::createTextureFactory(const QImage &image)
 {
+    Q_UNUSED(image);
     return 0;
 }
+
 
 
 void Context::renderNextFrame(QSGRenderer *renderer, GLuint fbo)
 {
     QSGContext::renderNextFrame(renderer, fbo);
 
-    if (useDithering) {
+#ifdef CUSTOMCONTEXT_DITHER
+    if (m_dither) {
         QSurface *s = glContext()->surface();
         QSize size = static_cast<QWindow *>(s)->size();
-        dither->prepare();
-        dither->draw(size.width(), size.height());
+        m_ditherProgram->prepare();
+        m_ditherProgram->draw(size.width(), size.height());
     }
+#endif
 }
+
+
 
 void Context::handleInvalidated()
 {
-    m_atlas_manager.invalidate();
+#ifdef CUSTOMCONTEXT_ATLASTEXTURE
+    m_atlasManager.invalidate();
+#endif
 }
 
-}; // namespace
+} // namespace

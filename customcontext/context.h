@@ -45,31 +45,20 @@
 #include <private/qsgcontext_p.h>
 #include <QtGui/QOpenGLShaderProgram>
 
-#include "atlastexture.h"
+#ifdef CUSTOMCONTEXT_DITHER
+#include "renderhooks/ordereddither2x2.h"
+#endif
+
+#ifdef CUSTOMCONTEXT_ATLASTEXTURE
+#include "texture/atlastexture.h"
+#endif
+
+
 
 namespace CustomContext
 {
 
 
-struct DitherProgram
-{
-    DitherProgram(QOpenGLContext *context)
-        : context(context)
-        , id_size(0)
-        , id_texture(0)
-        , prepared(false)
-    {
-    }
-
-    void prepare();
-    void draw(int width, int height);
-
-    QOpenGLShaderProgram program;
-    QOpenGLContext *context;
-    int id_size;
-    GLuint id_texture;
-    uint prepared : 1;
-};
 
 class Context : public QSGContext
 {
@@ -83,28 +72,35 @@ public:
 
     QAnimationDriver *createAnimationDriver(QObject *parent);
     QSGRenderer *createRenderer();
-
     QSurfaceFormat defaultSurfaceFormat() const;
     QSGTexture *createTexture(const QImage &image) const;
     QQuickTextureFactory *createTextureFactory(const QImage &image);
-
-    void setDitherEnabled(bool enabled);
 
 public slots:
     void handleInvalidated();
 
 private:
 
-    TextureAtlasManager m_atlas_manager;
-    DitherProgram *dither;
-    int samples;
-    uint useCustomRenderer : 1;
-    uint useCustomAnimationDriver : 1;
-    uint useDefaultRectangles : 1;
-    uint useMultisampling : 1;
-    uint useDefaultTextures : 1;
-    uint isCompositor : 1;
-    uint useDithering : 1;
+    int m_sampleCount;
+    uint m_useMultisampling : 1;
+
+#ifdef CUSTOMCONTEXT_DITHER
+    bool m_dither;
+    OrderedDither2x2 *m_ditherProgram;
+#endif
+
+#ifdef CUSTOMCONTEXT_OVERLAPRENDERER
+    bool m_overlapRenderer;
+#endif
+
+#ifdef CUSTOMCONTEXT_ANIMATIONDRIVER
+    bool m_animationDriver;
+#endif
+
+#ifdef CUSTOMCONTEXT_ATLASTEXTURE
+    TextureAtlasManager m_atlasManager;
+    bool m_atlasTexture;
+#endif
 };
 
 } // namespace
