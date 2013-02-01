@@ -10,16 +10,14 @@ SOURCES += \
     atlastexture.cpp \
     context.cpp \
     overlaprenderer.cpp \
-    pluginmain.cpp \
-    windowmanager.cpp
+    pluginmain.cpp
 
 HEADERS += \
     animationdriver.h \
     atlastexture.h \
     context.h \
     overlaprenderer.h \
-    pluginmain.h \
-    windowmanager.h
+    pluginmain.h
 
 OTHER_FILES += customcontext.json
 

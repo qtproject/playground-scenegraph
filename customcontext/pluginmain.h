@@ -61,7 +61,6 @@ public:
     QStringList keys() const;
     QSGContext *create(const QString &key) const;
     QQuickTextureFactory *createTextureFactoryFromImage(const QImage &image);
-    QQuickWindowManager *createWindowManager();
 
     static CustomContext::Context *instance;
 };

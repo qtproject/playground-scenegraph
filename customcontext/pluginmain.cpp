@@ -42,7 +42,6 @@
 
 #include "pluginmain.h"
 #include "context.h"
-#include "windowmanager.h"
 
 ContextPlugin::ContextPlugin(QObject *parent)
     : QSGContextPlugin(parent)
@@ -65,16 +64,6 @@ QQuickTextureFactory *ContextPlugin::createTextureFactoryFromImage(const QImage 
 {
     return instance ? instance->createTextureFactory(image) : 0;
 }
-
-QQuickWindowManager *ContextPlugin::createWindowManager()
-{
-    static bool useRenderLoop = qgetenv("QML_NO_CUSTOM_RENDERLOOP").isEmpty();
-    if (useRenderLoop)
-        return new WindowManager();
-    return 0;
-}
-
-
 
 CustomContext::Context *ContextPlugin::instance = 0;
 

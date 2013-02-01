@@ -46,8 +46,6 @@
 #include <qpa/qplatformnativeinterface.h>
 #include <private/qguiapplication_p.h>
 
-#include "windowmanager.h"
-
 namespace CustomContext {
 
 float get_env_float(const char *name, float defaultValue)
