@@ -89,7 +89,10 @@ Context::Context(QObject *parent)
     m_ditherProgram = 0;
 #endif
 
-    connect(this, SIGNAL(invalidated()), this, SLOT(handleInvalidated()));
+#ifdef CUSTOMCONTEXT_THREADUPLOADTEXTURE
+    m_threadUploadTexture = qgetenv("CUSTOMCONTEXT_NO_THREADUPLOADTEXTURE").isEmpty();
+    connect(this, SIGNAL(invalidated()), &m_threadUploadManager, SLOT(invalidated()), Qt::DirectConnection);
+#endif
 
 
 
@@ -112,6 +115,11 @@ Context::Context(QObject *parent)
 #ifdef CUSTOMCONTEXT_DITHER
     qDebug(" - ordered 2x2 dither: %s", m_dither ? "enabled" : "disabled");
 #endif
+
+#ifdef CUSTOMCONTEXT_THREADUPLOADTEXTURE
+    qDebug(" - threaded texture upload: %s", m_threadUploadTexture ? "enabled" : "disabled");
+#endif
+
 #endif
 
 }
@@ -124,6 +132,11 @@ void Context::initialize(QOpenGLContext *context)
 #ifdef CUSTOMCONTEXT_DITHER
     if (m_dither)
         m_ditherProgram = new OrderedDither2x2(context);
+#endif
+
+#ifdef CUSTOMCONTEXT_THREADUPLOADTEXTURE
+    if (m_threadUploadTexture)
+        m_threadUploadManager.initialized(context);
 #endif
 
 #ifdef CUSTOMCONTEXT_DEBUG
@@ -200,6 +213,12 @@ QAnimationDriver *Context::createAnimationDriver(QObject *parent)
 QQuickTextureFactory *Context::createTextureFactory(const QImage &image)
 {
     Q_UNUSED(image);
+
+#ifdef CUSTOMCONTEXT_THREADUPLOADTEXTURE
+    if (m_threadUploadTexture)
+        return m_threadUploadManager.create(image);
+#endif
+
     return 0;
 }
 
@@ -220,12 +239,5 @@ void Context::renderNextFrame(QSGRenderer *renderer, GLuint fbo)
 }
 
 
-
-void Context::handleInvalidated()
-{
-#ifdef CUSTOMCONTEXT_ATLASTEXTURE
-    m_atlasManager.invalidate();
-#endif
-}
 
 } // namespace

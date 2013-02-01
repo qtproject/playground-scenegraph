@@ -53,6 +53,10 @@
 #include "texture/atlastexture.h"
 #endif
 
+#ifdef CUSTOMCONTEXT_THREADUPLOADTEXTURE
+#include "texture/threaduploadtexture.h"
+#endif
+
 
 
 namespace CustomContext
@@ -76,9 +80,6 @@ public:
     QSGTexture *createTexture(const QImage &image) const;
     QQuickTextureFactory *createTextureFactory(const QImage &image);
 
-public slots:
-    void handleInvalidated();
-
 private:
 
     int m_sampleCount;
@@ -101,6 +102,12 @@ private:
     TextureAtlasManager m_atlasManager;
     bool m_atlasTexture;
 #endif
+
+#ifdef CUSTOMCONTEXT_THREADUPLOADTEXTURE
+    ThreadUploadTextureManager m_threadUploadManager;
+    bool m_threadUploadTexture;
+#endif
+
 };
 
 } // namespace

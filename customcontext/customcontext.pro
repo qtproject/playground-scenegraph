@@ -15,6 +15,12 @@ verbose:{
 }
 
 
+
+############################################################
+#
+# Rendering hooks
+#
+
 dither:{
     message("dither: enabled")
     DEFINES += CUSTOMCONTEXT_DITHER
@@ -26,6 +32,11 @@ dither:{
 
 
 
+############################################################
+#
+# Textures
+#
+
 atlastexture:{
     message("atlastexture: enabled")
     DEFINES += CUSTOMCONTEXT_ATLASTEXTURE
@@ -35,7 +46,21 @@ atlastexture:{
     message("atlastexture: disabled")
 }
 
+threaduploadtexture:{
+    message("threaduploadtexture: enabled")
+    DEFINES += CUSTOMCONTEXT_THREADUPLOADTEXTURE
+    SOURCES += texture/threaduploadtexture.cpp
+    HEADERS += texture/threaduploadtexture.h
+} else {
+    message("threaduploadtexture: disabled")
+}
 
+
+
+############################################################
+#
+# Animation Drivers
+#
 
 animationdriver:{
     message("animationdriver: enabled")
@@ -47,6 +72,11 @@ animationdriver:{
 }
 
 
+
+############################################################
+#
+# Renderers
+#
 
 overlaprenderer:{
     message("overlaprenderer: enabled")
@@ -72,7 +102,8 @@ SOURCES += \
 
 HEADERS += \
     context.h \
-    pluginmain.h
+    pluginmain.h \
+    texture/threaduploadtexture.h
 
 OTHER_FILES += customcontext.json
 
