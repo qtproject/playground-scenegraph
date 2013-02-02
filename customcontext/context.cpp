@@ -52,6 +52,10 @@
 #include "renderer/overlaprenderer.h"
 #endif
 
+#ifdef CUSTOMCONTEXT_MACTEXTURE
+#include "mactexture.h"
+#endif
+
 
 
 namespace CustomContext
@@ -84,6 +88,10 @@ Context::Context(QObject *parent)
     m_atlasTexture = qgetenv("CUSTOMCONTEXT_NO_ATLASTEXTURE").isEmpty();
 #endif
 
+#ifdef CUSTOMCONTEXT_MACTEXTURE
+    m_macTexture = qgetenv("CUSTOMCONTEXT_NO_MACTEXTURE").isEmpty();
+#endif
+
 #ifdef CUSTOMCONTEXT_DITHER
     m_dither= qgetenv("CUSTOMCONTEXT_NO_DITHER").isEmpty();
     m_ditherProgram = 0;
@@ -98,26 +106,31 @@ Context::Context(QObject *parent)
 
 #ifdef CUSTOMCONTEXT_DEBUG
     qDebug("CustomContext created:");
-    qDebug(" - multisampling: %s, samples=%d", m_useMultisampling ? "enabled" : "disabled", m_sampleCount);
+    qDebug(" - multisampling: %s, samples=%d", m_useMultisampling ? "yes" : "no", m_sampleCount);
 
 #ifdef CUSTOMCONTEXT_OVERLAPRENDERER
-    qDebug(" - overlaprenderer: %s", m_overlapRenderer ? "enabled" : "disabled");
+    qDebug(" - overlaprenderer: %s", m_overlapRenderer ? "yes" : "no");
 #endif
 
 #ifdef CUSTOMCONTEXT_ANIMATIONDRIVER
-    qDebug(" - custom animation driver: %s", m_animationDriver ? "enabled" : "disabled");
+    qDebug(" - custom animation driver: %s", m_animationDriver ? "yes" : "no");
 #endif
 
 #ifdef CUSTOMCONTEXT_ATLASTEXTURE
-    qDebug(" - atlas textures: %s", m_atlasTexture ? "enabled" : "disabled" );
+    qDebug(" - atlas textures: %s", m_atlasTexture ? "yes" : "no" );
 #endif
 
+#ifdef CUSTOMCONTEXT_MACTEXTURE
+    qDebug(" - mac textures: %s", m_macTexture ? "yes" : "no");
+#endif
+
+
 #ifdef CUSTOMCONTEXT_DITHER
-    qDebug(" - ordered 2x2 dither: %s", m_dither ? "enabled" : "disabled");
+    qDebug(" - ordered 2x2 dither: %s", m_dither ? "yes" : "no");
 #endif
 
 #ifdef CUSTOMCONTEXT_THREADUPLOADTEXTURE
-    qDebug(" - threaded texture upload: %s", m_threadUploadTexture ? "enabled" : "disabled");
+    qDebug(" - threaded texture upload: %s", m_threadUploadTexture ? "yes" : "no");
 #endif
 
 #endif
@@ -183,6 +196,12 @@ QSGTexture *Context::createTexture(const QImage &image) const
     if (m_atlasTexture)
         return const_cast<Context *>(this)->m_atlasManager.create(image);
 #endif
+
+#ifdef CUSTOMCONTEXT_MACTEXTURE
+    if (m_macTexture)
+        return new MacTexture(image);
+#endif
+
     return QSGContext::createTexture(image);
 }
 

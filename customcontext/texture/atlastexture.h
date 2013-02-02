@@ -46,15 +46,9 @@
 
 #include <QtGui/qopengl.h>
 
-#ifdef QT_QUICK_LIB
 #include <QtQuick/QSGTexture>
 #include <QtQuick/private/qsgtexture_p.h>
 #include <QtQuick/private/qsgareaallocator_p.h>
-#else
-#include <QtDeclarative/QSGTexture>
-#include <QtDeclarative/private/qsgtexture_p.h>
-#include <QtDeclarative/private/qsgareaallocator_p.h>
-#endif
 
 namespace CustomContext
 {

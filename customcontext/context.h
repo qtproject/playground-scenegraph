@@ -50,11 +50,11 @@
 #endif
 
 #ifdef CUSTOMCONTEXT_ATLASTEXTURE
-#include "texture/atlastexture.h"
+#include "atlastexture.h"
 #endif
 
 #ifdef CUSTOMCONTEXT_THREADUPLOADTEXTURE
-#include "texture/threaduploadtexture.h"
+#include "threaduploadtexture.h"
 #endif
 
 
@@ -101,6 +101,10 @@ private:
 #ifdef CUSTOMCONTEXT_ATLASTEXTURE
     TextureAtlasManager m_atlasManager;
     bool m_atlasTexture;
+#endif
+
+#ifdef CUSTOMCONTEXT_MACTEXTURE
+    bool m_macTexture;
 #endif
 
 #ifdef CUSTOMCONTEXT_THREADUPLOADTEXTURE

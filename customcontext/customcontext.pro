@@ -5,13 +5,13 @@ CONFIG += plugin
 
 QT += gui-private core-private quick-private qml-private v8-private
 
-
+message("")
 
 verbose:{
-    message("verbose: enabled")
+    message("verbose ..................: yes")
     DEFINES+=CUSTOMCONTEXT_DEBUG
 } else {
-    message("verbose: disabled")
+    message("verbose ..................: no")
 }
 
 
@@ -22,12 +22,12 @@ verbose:{
 #
 
 dither:{
-    message("dither: enabled")
+    message("dither ...................: yes")
     DEFINES += CUSTOMCONTEXT_DITHER
     SOURCES += renderhooks/ordereddither2x2.cpp
     HEADERS += renderhooks/ordereddither2x2.h
 } else {
-    message("dither: disabled")
+    message("dither ...................: no")
 }
 
 
@@ -38,21 +38,33 @@ dither:{
 #
 
 atlastexture:{
-    message("atlastexture: enabled")
+    message("atlastexture .............: yes")
     DEFINES += CUSTOMCONTEXT_ATLASTEXTURE
     SOURCES += texture/atlastexture.cpp
     HEADERS += texture/atlastexture.h
+    INCLUDEPATH += texture
 } else {
-    message("atlastexture: disabled")
+    message("atlastexture .............: no")
 }
 
 threaduploadtexture:{
-    message("threaduploadtexture: enabled")
+    message("threaduploadtexture ......: yes")
     DEFINES += CUSTOMCONTEXT_THREADUPLOADTEXTURE
     SOURCES += texture/threaduploadtexture.cpp
     HEADERS += texture/threaduploadtexture.h
+    INCLUDEPATH += texture
 } else {
-    message("threaduploadtexture: disabled")
+    message("threaduploadtexture ......: no")
+}
+
+mactexture:{
+    message("mactexture ...............: yes")
+    DEFINES += CUSTOMCONTEXT_MACTEXTURE
+    SOURCES += texture/mactexture.cpp
+    HEADERS += texture/mactexture.h
+    INCLUDEPATH += texture
+} else {
+    message("mactexture ...............: no");
 }
 
 
@@ -63,12 +75,12 @@ threaduploadtexture:{
 #
 
 animationdriver:{
-    message("animationdriver: enabled")
+    message("animationdriver ..........: yes")
     DEFINES += CUSTOMCONTEXT_ANIMATIONDRIVER
     SOURCES += animation/animationdriver.cpp
     HEADERS += animation/animationdriver.h
 } else {
-    message("animationdriver: disabled")
+    message("animationdriver ..........: no")
 }
 
 
@@ -79,12 +91,12 @@ animationdriver:{
 #
 
 overlaprenderer:{
-    message("overlaprenderer: enabled")
+    message("overlaprenderer ..........: yes")
     DEFINES += CUSTOMCONTEXT_OVERLAPRENDERER
     SOURCES += renderer/overlaprenderer.cpp
     HEADERS += renderer/overlaprenderer.h
 } else {
-    message("overlaprenderer: disabled")
+    message("overlaprenderer ..........: no")
 }
 
 
@@ -102,8 +114,7 @@ SOURCES += \
 
 HEADERS += \
     context.h \
-    pluginmain.h \
-    texture/threaduploadtexture.h
+    pluginmain.h
 
 OTHER_FILES += customcontext.json
 
