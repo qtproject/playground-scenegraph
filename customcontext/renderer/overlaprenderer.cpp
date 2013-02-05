@@ -895,6 +895,10 @@ void Renderer::render()
 
     QRect r = viewportRect();
     glViewport(r.x(), deviceRect().bottom() - r.bottom(), r.width(), r.height());
+    m_viewportRect.minPoint.x = r.x();
+    m_viewportRect.minPoint.y = r.y();
+    m_viewportRect.maxPoint.x = r.x() + r.width();
+    m_viewportRect.maxPoint.y = r.y() + r.height();
     m_current_projection_matrix = projectionMatrix();
     m_current_model_view_matrix.setToIdentity();
 
@@ -1080,10 +1084,12 @@ void Renderer::buildRenderOrderList(QSGNode *node)
 
         e->batchConfig = -1;
         e->nextInBatchConfig = -1;
-        addElementToBatchConfig(e);
 
-        m_elementsInRenderOrder.push_back(e);
-        Q_ASSERT(e->batchConfig != -1);
+        if (e->worldRect.intersects(m_viewportRect)) {
+            addElementToBatchConfig(e);
+            m_elementsInRenderOrder.push_back(e);
+            Q_ASSERT(e->batchConfig != -1);
+        }
     } else if (nodeType == QSGNode::RenderNodeType) {
         RenderElement *e = m_elementHash.value(node, 0);
         e->batchConfig = -1;

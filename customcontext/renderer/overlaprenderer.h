@@ -353,6 +353,7 @@ private:
 
     void buildDrawLists();
 
+    Rect m_viewportRect;
     QHash<QSGNode *, RenderElement *> m_elementHash;
     std::vector<RenderElement *> m_elementsInRenderOrder;
     std::vector<VertexFormat *> m_vertexFormats;
