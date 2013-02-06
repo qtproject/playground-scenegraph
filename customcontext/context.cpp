@@ -59,6 +59,10 @@
 #include "animation/animationdriver.h"
 #endif
 
+#ifdef CUSTOMCONTEXT_SWAPLISTENINGANIMATIONDRIVER
+#include "animation/swaplisteninganimationdriver.h"
+#endif
+
 #ifdef CUSTOMCONTEXT_OVERLAPRENDERER
 #include "renderer/overlaprenderer.h"
 #endif
@@ -98,6 +102,10 @@ Context::Context(QObject *parent)
     m_animationDriver = qgetenv("CUSTOMCONTEXT_NO_ANIMATIONDRIVER").isEmpty();
 #endif
 
+#ifdef CUSTOMCONTEXT_SWAPLISTENINGANIMATIONDRIVER
+    m_swapListeningAnimationDriver = qgetenv("CUSTOMCONTEXT_NO_SWAPLISTENINGANIMATIONDRIVER").isEmpty();
+#endif
+
 #ifdef CUSTOMCONTEXT_ATLASTEXTURE
     m_atlasTexture = qgetenv("CUSTOMCONTEXT_NO_ATLASTEXTURE").isEmpty();
 #endif
@@ -125,6 +133,9 @@ Context::Context(QObject *parent)
 
 #ifdef CUSTOMCONTEXT_OVERLAPRENDERER
     qDebug(" - overlaprenderer: %s", m_overlapRenderer ? "yes" : "no");
+#endif
+#ifdef CUSTOMCONTEXT_SWAPLISTENINGANIMATIONDRIVER
+    qDebug(" - swap listening animation driver: %s", m_swapListeningAnimationDriver ? "yes" : "no");
 #endif
 #ifdef CUSTOMCONTEXT_ANIMATIONDRIVER
     qDebug(" - custom animation driver: %s", m_animationDriver ? "yes" : "no");
@@ -161,7 +172,6 @@ void Context::initialize(QOpenGLContext *context)
     if (m_threadUploadTexture)
         m_threadUploadManager.initialized(context);
 #endif
-
 
 #ifdef CUSTOMCONTEXT_DEBUG
     QElapsedTimer prepareTimer;
@@ -202,7 +212,7 @@ void Context::initialize(QOpenGLContext *context)
 #ifdef CUSTOMCONTEXT_DEBUG
     qDebug("CustomContext: initialized..");
     if (m_materialPreloading)
-        qDebug(" - Standard materials compiled in: %d ms", prepareTimer.elapsed());
+        qDebug(" - Standard materials compiled in: %d ms", (int) prepareTimer.elapsed());
     qDebug(" - OpenGL extensions: %s", glGetString(GL_EXTENSIONS));
     int textureSize;
     glGetIntegerv(GL_MAX_TEXTURE_SIZE, &textureSize);
@@ -276,6 +286,11 @@ QAnimationDriver *Context::createAnimationDriver(QObject *parent)
     if (m_animationDriver)
         return new AnimationDriver();
 #endif
+#ifdef CUSTOMCONTEXT_SWAPLISTENINGANIMATIONDRIVER
+    if (m_swapListeningAnimationDriver)
+        return new SwapListeningAnimationDriver();
+#endif
+
    return QSGContext::createAnimationDriver(parent);
 }
 

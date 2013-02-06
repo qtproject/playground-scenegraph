@@ -100,6 +100,10 @@ private:
     bool m_animationDriver;
 #endif
 
+#ifdef CUSTOMCONTEXT_SWAPLISTENINGANIMATIONDRIVER
+    bool m_swapListeningAnimationDriver;
+#endif
+
 #ifdef CUSTOMCONTEXT_ATLASTEXTURE
     TextureAtlasManager m_atlasManager;
     bool m_atlasTexture;

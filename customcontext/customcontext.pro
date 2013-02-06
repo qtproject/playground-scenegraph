@@ -64,7 +64,7 @@ mactexture:{
     HEADERS += texture/mactexture.h
     INCLUDEPATH += texture
 } else {
-    message("mactexture ...............: no");
+    message("mactexture ...............: no")
 }
 
 
@@ -81,6 +81,15 @@ animationdriver:{
     HEADERS += animation/animationdriver.h
 } else {
     message("animationdriver ..........: no")
+}
+
+swaplistenanimationdriver:{
+    message("swaplistenanimationdriver : yes")
+    DEFINES += CUSTOMCONTEXT_SWAPLISTENINGANIMATIONDRIVER
+    SOURCES += animation/swaplisteninganimationdriver.cpp
+    HEADERS += animation/swaplisteninganimationdriver.h
+} else {
+    message("swaplistenanimationdriver : no")
 }
 
 
