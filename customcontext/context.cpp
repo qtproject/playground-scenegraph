@@ -41,8 +41,19 @@
 
 #include "context.h"
 
+#include <QtCore/QCoreApplication>
+#include <QtCore/QElapsedTimer>
+
 #include <QtGui/QWindow>
 #include <QtGui/QOpenGLContext>
+
+#include <QtQuick/QSGFlatColorMaterial>
+#include <QtQuick/QSGVertexColorMaterial>
+#include <QtQuick/QSGOpaqueTextureMaterial>
+#include <QtQuick/QSGTextureMaterial>
+#include <private/qsgdefaultimagenode_p.h>
+#include <private/qsgdefaultrectanglenode_p.h>
+#include <private/qsgdistancefieldglyphnode_p_p.h>
 
 #ifdef CUSTOMCONTEXT_ANIMATIONDRIVER
 #include "animation/animationdriver.h"
@@ -75,6 +86,8 @@ Context::Context(QObject *parent)
         if (ok)
             m_sampleCount = override;
     }
+
+    m_materialPreloading = qgetenv("CUSTOMCONTEXT_NO_MATERIAL_PRELOADING").isEmpty();
 
 #ifdef CUSTOMCONTEXT_OVERLAPRENDERER
     m_overlapRenderer = qgetenv("CUSTOMCONTEXT_NO_OVERLAPRENDERER").isEmpty();
@@ -111,26 +124,21 @@ Context::Context(QObject *parent)
 #ifdef CUSTOMCONTEXT_OVERLAPRENDERER
     qDebug(" - overlaprenderer: %s", m_overlapRenderer ? "yes" : "no");
 #endif
-
 #ifdef CUSTOMCONTEXT_ANIMATIONDRIVER
     qDebug(" - custom animation driver: %s", m_animationDriver ? "yes" : "no");
 #endif
-
 #ifdef CUSTOMCONTEXT_ATLASTEXTURE
     qDebug(" - atlas textures: %s", m_atlasTexture ? "yes" : "no" );
 #endif
-
+#ifdef CUSTOMCONTEXT_THREADUPLOADTEXTURE
+    qDebug(" - threaded texture upload: %s", m_threadUploadTexture ? "yes" : "no");
+#endif
 #ifdef CUSTOMCONTEXT_MACTEXTURE
     qDebug(" - mac textures: %s", m_macTexture ? "yes" : "no");
 #endif
 
-
 #ifdef CUSTOMCONTEXT_DITHER
     qDebug(" - ordered 2x2 dither: %s", m_dither ? "yes" : "no");
-#endif
-
-#ifdef CUSTOMCONTEXT_THREADUPLOADTEXTURE
-    qDebug(" - threaded texture upload: %s", m_threadUploadTexture ? "yes" : "no");
 #endif
 
 #endif
@@ -152,10 +160,53 @@ void Context::initialize(QOpenGLContext *context)
         m_threadUploadManager.initialized(context);
 #endif
 
+
+#ifdef CUSTOMCONTEXT_DEBUG
+    QElapsedTimer prepareTimer;
+    prepareTimer.start();
+#endif
+
+    if (m_materialPreloading) {
+        {
+            QSGVertexColorMaterial m;
+            prepareMaterial(&m);
+        }
+        {
+            QSGFlatColorMaterial m;
+            prepareMaterial(&m);
+        }
+        {
+            QSGOpaqueTextureMaterial m;
+            prepareMaterial(&m);
+        }
+        {
+            QSGTextureMaterial m;
+            prepareMaterial(&m);
+        }
+        {
+            SmoothTextureMaterial m;
+            prepareMaterial(&m);
+        }
+        {
+            SmoothColorMaterial m;
+            prepareMaterial(&m);
+        }
+        {
+            QSGDistanceFieldTextMaterial m;
+            prepareMaterial(&m);
+        }
+    }
+
 #ifdef CUSTOMCONTEXT_DEBUG
     qDebug("CustomContext: initialized..");
+    if (m_materialPreloading)
+        qDebug(" - Standard materials compiled in: %d ms", prepareTimer.elapsed());
     qDebug(" - OpenGL extensions: %s", glGetString(GL_EXTENSIONS));
+    int textureSize;
+    glGetIntegerv(GL_MAX_TEXTURE_SIZE, &textureSize);
+    qDebug(" - GL Max Texture Size: %d", textureSize);
 #endif
+
 
     QSGContext::initialize(context);
 }
@@ -182,8 +233,6 @@ QSurfaceFormat Context::defaultSurfaceFormat() const
     format.setStencilBufferSize(8);
     if (m_useMultisampling)
         format.setSamples(m_sampleCount);
-
-    qDebug() << "returning surface format...";
 
     return format;
 }

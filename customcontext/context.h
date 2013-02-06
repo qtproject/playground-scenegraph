@@ -84,6 +84,7 @@ private:
 
     int m_sampleCount;
     uint m_useMultisampling : 1;
+    uint m_materialPreloading : 1;
 
 #ifdef CUSTOMCONTEXT_DITHER
     bool m_dither;
@@ -111,6 +112,8 @@ private:
     ThreadUploadTextureManager m_threadUploadManager;
     bool m_threadUploadTexture;
 #endif
+
+
 
 };
 
