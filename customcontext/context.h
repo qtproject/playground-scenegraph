@@ -85,6 +85,7 @@ private:
     int m_sampleCount;
     uint m_useMultisampling : 1;
     uint m_materialPreloading : 1;
+    uint m_depthBuffer : 1;
 
 #ifdef CUSTOMCONTEXT_DITHER
     bool m_dither;

@@ -88,6 +88,7 @@ Context::Context(QObject *parent)
     }
 
     m_materialPreloading = qgetenv("CUSTOMCONTEXT_NO_MATERIAL_PRELOADING").isEmpty();
+    m_depthBuffer = qgetenv("CUSTOMCONTEXT_NO_DEPTH_BUFFER").isEmpty();
 
 #ifdef CUSTOMCONTEXT_OVERLAPRENDERER
     m_overlapRenderer = qgetenv("CUSTOMCONTEXT_NO_OVERLAPRENDERER").isEmpty();
@@ -120,6 +121,7 @@ Context::Context(QObject *parent)
 #ifdef CUSTOMCONTEXT_DEBUG
     qDebug("CustomContext created:");
     qDebug(" - multisampling: %s, samples=%d", m_useMultisampling ? "yes" : "no", m_sampleCount);
+    qDebug(" - depth buffer: %s", m_depthBuffer ? "yes" : "no");
 
 #ifdef CUSTOMCONTEXT_OVERLAPRENDERER
     qDebug(" - overlaprenderer: %s", m_overlapRenderer ? "yes" : "no");
@@ -231,9 +233,10 @@ QSurfaceFormat Context::defaultSurfaceFormat() const
 {
     QSurfaceFormat format;
     format.setStencilBufferSize(8);
+    if (m_depthBuffer)
+        format.setDepthBufferSize(24);
     if (m_useMultisampling)
         format.setSamples(m_sampleCount);
-
     return format;
 }
 
