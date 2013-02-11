@@ -85,6 +85,9 @@ public:
     int textureId() const;
     bool bind();
 
+    void uploadRgba(AtlasTexture *texture);
+    void uploadBgra(AtlasTexture *texture);
+
     AtlasTexture *create(const QImage &image);
     void remove(AtlasTexture *t);
 
@@ -96,7 +99,11 @@ private:
     QSize m_size;
     QList<AtlasTexture *> m_pending_uploads;
 
+    GLuint m_internalFormat;
+    GLuint m_externalFormat;
+
     uint m_allocated : 1;
+
 };
 
 class AtlasTexture : public QSGTexture
@@ -113,8 +120,6 @@ public:
 
     QRectF normalizedTextureSubRect() const { return m_texture_coords_rect; }
 
-    // ### remove once the qtdeclarative versions are all settled out..
-    QRectF textureSubRect() const { return m_texture_coords_rect; }
     QRect atlasSubRect() const { return m_allocated_rect; }
     QRect atlasSubRectWithoutPadding() const { return m_allocated_rect_without_padding; }
 

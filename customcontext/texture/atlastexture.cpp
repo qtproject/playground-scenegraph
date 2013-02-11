@@ -42,6 +42,7 @@
 #include "atlastexture.h"
 
 #include <QtCore/QVarLengthArray>
+#include <QtCore/QElapsedTimer>
 
 #include <QtGui/QOpenGLContext>
 
@@ -52,6 +53,15 @@
 // "small" is defined as "char" on Windows.
 #ifdef small
 #undef small
+#endif
+
+#ifndef GL_BGRA
+#define GL_BGRA 0x80E1
+#endif
+
+
+#ifndef QSG_NO_RENDERER_TIMING
+static bool qsg_render_timing = !qgetenv("QML_RENDERER_TIMING").isEmpty();
 #endif
 
 namespace CustomContext
@@ -70,8 +80,8 @@ TextureAtlasManager::TextureAtlasManager()
     : m_small_atlas(0)
     , m_large_atlas(0)
 {
-    int small = get_env_int("CustomContext_SMALL_ATLAS_SIZE", 512);
-    int large = get_env_int("CustomContext_LARGE_ATLAS_SIZE", 1024);
+    int small = get_env_int("CustomContext_SMALL_ATLAS_SIZE", 1024);
+    int large = get_env_int("CustomContext_LARGE_ATLAS_SIZE", 2048);
 
     m_atlas_size_limit = get_env_int("CustomContext_ATLAS_SIZE_LIMIT", 256);
     m_small_atlas_size = QSize(small, small);
@@ -96,7 +106,6 @@ void TextureAtlasManager::invalidate()
 QSGTexture *TextureAtlasManager::create(const QImage &image)
 {
     if (image.width() < m_atlas_size_limit && image.height() < m_atlas_size_limit) {
-
         QSGTexture *t = 0;
 
         // If we have a larger atlas, try to allocate in that one, so we get as many
@@ -131,6 +140,24 @@ TextureAtlas::TextureAtlas(const QSize &size)
     , m_size(size)
     , m_allocated(false)
 {
+    const char *ext = (const char *) glGetString(GL_EXTENSIONS);
+
+#ifdef QT_OPENGL_ES
+    if (strstr(ext, "GL_EXT_bgra")
+            || strstr(ext, "GL_EXT_texture_format_BGRA8888")
+            || strstr(ext, "GL_IMG_texture_format_BGRA8888")) {
+        m_internalFormat = m_externalFormat = GL_BGRA;
+    } else if (strstr(ext, "GL_APPLE_texture_format_BGRA8888")) {
+        m_internalFormat = GL_RGBA;
+        m_externalFormat = GL_BGRA;
+    } else {
+        m_internalFormat = m_externalFormat = GL_RGBA;
+    }
+#else
+    m_internalFormat = GL_RGBA;
+    m_externalFormat = GL_BGRA;
+#endif
+
 }
 
 TextureAtlas::~TextureAtlas()
@@ -175,6 +202,81 @@ static void swizzleBGRAToRGBA(QImage *image)
     }
 }
 
+void TextureAtlas::uploadRgba(AtlasTexture *texture)
+{
+    const QImage &image = texture->image();
+    const QRect &r = texture->atlasSubRect();
+
+    QImage tmp(r.width(), r.height(), QImage::Format_ARGB32_Premultiplied);
+    {
+        QPainter p(&tmp);
+        p.setCompositionMode(QPainter::CompositionMode_Source);
+
+        int w = r.width();
+        int h = r.height();
+        int iw = image.width();
+        int ih = image.height();
+
+        p.drawImage(1, 1, image);
+        p.drawImage(1, 0, image, 0, 0, iw, 1);
+        p.drawImage(1, h - 1, image, 0, ih - 1, iw, 1);
+        p.drawImage(0, 1, image, 0, 0, 1, ih);
+        p.drawImage(w - 1, 1, image, iw - 1, 0, 1, ih);
+        p.drawImage(0, 0, image, 0, 0, 1, 1);
+        p.drawImage(0, h - 1, image, 0, ih - 1, 1, 1);
+        p.drawImage(w - 1, 0, image, iw - 1, 0, 1, 1);
+        p.drawImage(w - 1, h - 1, image, iw - 1, ih - 1, 1, 1);
+    }
+
+    swizzleBGRAToRGBA(&tmp);
+    glTexSubImage2D(GL_TEXTURE_2D, 0, r.x(), r.y(), r.width(), r.height(), m_externalFormat, GL_UNSIGNED_BYTE, tmp.constBits());
+}
+
+void TextureAtlas::uploadBgra(AtlasTexture *texture)
+{
+    const QRect &r = texture->atlasSubRect();
+    QImage image = texture->image();
+
+    if (image.format() != QImage::Format_ARGB32_Premultiplied
+            || image.format() != QImage::Format_RGB32) {
+        image = image.convertToFormat(QImage::Format_ARGB32_Premultiplied);
+    }
+
+    QVarLengthArray<quint32, 512> tmpBits(qMax(image.width() + 2, image.height() + 2));
+    int iw = image.width();
+    int ih = image.height();
+    int bpl = image.bytesPerLine() / 4;
+    const quint32 *src = (const quint32 *) image.constBits();
+    quint32 *dst = tmpBits.data();
+
+    // top row, padding corners
+    dst[0] = src[0];
+    memcpy(dst + 1, src, iw * sizeof(quint32));
+    dst[1 + iw] = src[iw-1];
+    glTexSubImage2D(GL_TEXTURE_2D, 0, r.x(), r.y(), iw + 2, 1, m_externalFormat, GL_UNSIGNED_BYTE, dst);
+
+    // bottom row, padded corners
+    const quint32 *lastRow = src + bpl * (ih - 1);
+    dst[0] = lastRow[0];
+    memcpy(dst + 1, lastRow, iw * sizeof(quint32));
+    dst[1 + iw] = lastRow[iw-1];
+    glTexSubImage2D(GL_TEXTURE_2D, 0, r.x(), r.y() + ih + 1, iw + 2, 1, m_externalFormat, GL_UNSIGNED_BYTE, dst);
+
+    // left column
+    for (int i=0; i<ih; ++i)
+        dst[i] = src[i * bpl];
+    glTexSubImage2D(GL_TEXTURE_2D, 0, r.x(), r.y() + 1, 1, ih, m_externalFormat, GL_UNSIGNED_BYTE, dst);
+
+    // right column
+    for (int i=0; i<ih; ++i)
+        dst[i] = src[i * bpl + iw - 1];
+    glTexSubImage2D(GL_TEXTURE_2D, 0, r.x() + iw + 1, r.y() + 1, 1, ih, m_externalFormat, GL_UNSIGNED_BYTE, dst);
+
+    // Inner part of the image....
+    glTexSubImage2D(GL_TEXTURE_2D, 0, r.x() + 1, r.y() + 1, r.width() - 2, r.height() - 2, m_externalFormat, GL_UNSIGNED_BYTE, src);
+
+}
+
 bool TextureAtlas::bind()
 {
     bool forceUpdate = false;
@@ -189,12 +291,12 @@ bool TextureAtlas::bind()
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_size.width(), m_size.height(), 0, GL_RGBA, GL_UNSIGNED_BYTE, 0);
+        glTexImage2D(GL_TEXTURE_2D, 0, m_internalFormat, m_size.width(), m_size.height(), 0, m_externalFormat, GL_UNSIGNED_BYTE, 0);
 
 #if 0
         QImage pink(m_size.width(), m_size.height(), QImage::Format_RGB32);
         pink.fill(0xffff00ff);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_size.width(), m_size.height(), 0, GL_RGBA, GL_UNSIGNED_BYTE, pink.constBits());
+        glTexImage2D(GL_TEXTURE_2D, 0, m_internalFormat, m_size.width(), m_size.height(), 0, m_externalFormat, GL_UNSIGNED_BYTE, pink.constBits());
 #endif
 
         GLenum errorCode = glGetError();
@@ -215,48 +317,30 @@ bool TextureAtlas::bind()
     if (m_texture_id == 0)
         return false;
 
-
-//#define TIMING
-#ifdef TIMING
-    QTime time;
-    time.start();
-#endif
-
     // Upload all pending images..
     for (int i=0; i<m_pending_uploads.size(); ++i) {
-        const QImage &image = m_pending_uploads.at(i)->image();
-        const QRect &r = m_pending_uploads.at(i)->atlasSubRect();
 
-        QImage tmp(r.width(), r.height(), QImage::Format_ARGB32_Premultiplied);
-        {
-            QPainter p(&tmp);
-            p.setCompositionMode(QPainter::CompositionMode_Source);
+#ifndef QSG_NO_RENDERER_TIMING
+        QElapsedTimer timer;
+        if (qsg_render_timing)
+            timer.start();
+#endif
 
-            int w = r.width();
-            int h = r.height();
-            int iw = image.width();
-            int ih = image.height();
-
-            p.drawImage(1, 1, image);
-            p.drawImage(1, 0, image, 0, 0, iw, 1);
-            p.drawImage(1, h - 1, image, 0, ih - 1, iw, 1);
-            p.drawImage(0, 1, image, 0, 0, 1, ih);
-            p.drawImage(w - 1, 1, image, iw - 1, 0, 1, ih);
-            p.drawImage(0, 0, image, 0, 0, 1, 1);
-            p.drawImage(0, h - 1, image, 0, ih - 1, 1, 1);
-            p.drawImage(w - 1, 0, image, iw - 1, 0, 1, 1);
-            p.drawImage(w - 1, h - 1, image, iw - 1, ih - 1, 1, 1);
+        if (m_externalFormat == GL_RGBA) {
+            uploadRgba(m_pending_uploads.at(i));
+        } else {
+            uploadBgra(m_pending_uploads.at(i));
         }
-
-        swizzleBGRAToRGBA(&tmp);
-        glTexSubImage2D(GL_TEXTURE_2D, 0, r.x(), r.y(), r.width(), r.height(), GL_RGBA, GL_UNSIGNED_BYTE, tmp.constBits());
+#ifndef QSG_NO_RENDERER_TIMING
+        if (qsg_render_timing) {
+            printf("   - atlastexture(%dx%d), uploaded in %d ms\n",
+                   m_pending_uploads.at(i)->image().width(),
+                   m_pending_uploads.at(i)->image().height(),
+                   (int) timer.elapsed());
+        }
+#endif
     }
 
-#ifdef TIMING
-    static int totalTime;
-    totalTime += time.elapsed();
-    printf("total texture upload time: %d\n", totalTime);
-#endif
 
     m_pending_uploads.clear();
 
