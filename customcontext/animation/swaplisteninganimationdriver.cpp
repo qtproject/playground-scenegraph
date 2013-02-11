@@ -72,6 +72,10 @@ void SwapListeningAnimationDriver::swapped()
         ++m_stabilizer.count;
         if (m_stabilizer.count > m_stabilizer.requiredCount) {
             qreal vsync = current / (qreal) m_stabilizer.count;
+#ifdef CUSTOMCONTEXT_DEBUG
+            if (m_stableVsync == 0)
+                qDebug(" --- Swap Animation Driver: Stable VSync found %.2f\n", vsync);
+#endif
             emit stableVSyncChanged(vsync);
             m_stabilizer.reset();
         } else {
@@ -103,6 +107,11 @@ void SwapListeningAnimationDriver::advance()
     if (m_stableVsync > 0) {
         m_currentTime += m_stableVsync;
         if (m_currentTime + m_stableVsync < m_timer.elapsed()) {
+#ifdef CUSTOMCONTEXT_DEBUG
+            qDebug(" --- Swap Animation Driver: compensated animationTime=%d, actualTime=%d",
+                   (int) m_currentTime,
+                   (int) m_timer.elapsed());
+#endif
             m_currentTime = qFloor((m_timer.elapsed() / m_stableVsync) + 1) * m_stableVsync;
         }
     } else {
