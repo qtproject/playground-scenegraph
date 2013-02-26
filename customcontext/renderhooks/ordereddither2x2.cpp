@@ -67,6 +67,9 @@ void OrderedDither2x2::draw(int width, int height)
     context->functions()->glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, id_texture);
 
+    glDisable(GL_STENCIL_TEST);
+    glDisable(GL_DEPTH_TEST);
+    glEnable(GL_BLEND);
     glBlendFunc(GL_ONE, GL_ONE);
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 
