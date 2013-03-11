@@ -110,6 +110,16 @@ overlaprenderer:{
 
 
 
+
+materialpreload:{
+    message("materialpreload ..........: yes")
+    DEFINES += CUSTOMCONTEXT_MATERIALPRELOAD
+} else {
+    message("materialpreload ..........: no")
+}
+
+
+
 message("");
 message("Enable the above features by adding them to the qmake config, for instance:")
 message(" > qmake \"CONFIG+=verbose atlastexture dither\"");

@@ -91,7 +91,9 @@ Context::Context(QObject *parent)
             m_sampleCount = override;
     }
 
+#ifdef CUSTOMCONTEXT_MATERIALPRELOAD
     m_materialPreloading = qgetenv("CUSTOMCONTEXT_NO_MATERIAL_PRELOADING").isEmpty();
+#endif
     m_depthBuffer = qgetenv("CUSTOMCONTEXT_NO_DEPTH_BUFFER").isEmpty();
 
 #ifdef CUSTOMCONTEXT_OVERLAPRENDERER
@@ -131,6 +133,9 @@ Context::Context(QObject *parent)
     qDebug(" - multisampling: %s, samples=%d", m_useMultisampling ? "yes" : "no", m_sampleCount);
     qDebug(" - depth buffer: %s", m_depthBuffer ? "yes" : "no");
 
+#ifdef CUSTOMCONTEXT_MATERIALPRELOAD
+    qDebug(" - material preload: %s", m_materialPreloading ? "yes" : "no");
+#endif
 #ifdef CUSTOMCONTEXT_OVERLAPRENDERER
     qDebug(" - overlaprenderer: %s", m_overlapRenderer ? "yes" : "no");
 #endif
@@ -173,11 +178,11 @@ void Context::initialize(QOpenGLContext *context)
         m_threadUploadManager.initialized(context);
 #endif
 
+#ifdef CUSTOMCONTEXT_MATERIALPRELOAD
 #ifdef CUSTOMCONTEXT_DEBUG
     QElapsedTimer prepareTimer;
     prepareTimer.start();
 #endif
-
     if (m_materialPreloading) {
         {
             QSGVertexColorMaterial m;
@@ -208,11 +213,14 @@ void Context::initialize(QOpenGLContext *context)
             prepareMaterial(&m);
         }
     }
+#endif
 
 #ifdef CUSTOMCONTEXT_DEBUG
     qDebug("CustomContext: initialized..");
+#ifdef CUSTOMCONTEXT_MATERIALPRELOAD
     if (m_materialPreloading)
         qDebug(" - Standard materials compiled in: %d ms", (int) prepareTimer.elapsed());
+#endif
     qDebug(" - OpenGL extensions: %s", glGetString(GL_EXTENSIONS));
     int textureSize;
     glGetIntegerv(GL_MAX_TEXTURE_SIZE, &textureSize);
