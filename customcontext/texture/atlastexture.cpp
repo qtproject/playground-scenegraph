@@ -147,9 +147,6 @@ TextureAtlas::TextureAtlas(const QSize &size)
             || strstr(ext, "GL_EXT_texture_format_BGRA8888")
             || strstr(ext, "GL_IMG_texture_format_BGRA8888")) {
         m_internalFormat = m_externalFormat = GL_BGRA;
-    } else if (strstr(ext, "GL_APPLE_texture_format_BGRA8888")) {
-        m_internalFormat = GL_RGBA;
-        m_externalFormat = GL_BGRA;
     } else {
         m_internalFormat = m_externalFormat = GL_RGBA;
     }
