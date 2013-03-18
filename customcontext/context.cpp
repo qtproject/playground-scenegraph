@@ -222,6 +222,10 @@ void Context::initialize(QOpenGLContext *context)
         qDebug(" - Standard materials compiled in: %d ms", (int) prepareTimer.elapsed());
 #endif
     qDebug(" - OpenGL extensions: %s", glGetString(GL_EXTENSIONS));
+    qDebug(" - OpenGL Vendor: %s", glGetString(GL_VENDOR));
+    qDebug(" - OpenGL Version: %s", glGetString(GL_VERSION));
+    qDebug(" - OpenGL Renderer: %s", glGetString(GL_RENDERER));
+    qDebug(" - OpenGL Shading Language Version: %s", glGetString(GL_SHADING_LANGUAGE_VERSION));
     int textureSize;
     glGetIntegerv(GL_MAX_TEXTURE_SIZE, &textureSize);
     qDebug(" - GL Max Texture Size: %d", textureSize);
