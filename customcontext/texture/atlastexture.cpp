@@ -105,8 +105,8 @@ void TextureAtlasManager::invalidate()
 
 QSGTexture *TextureAtlasManager::create(const QImage &image)
 {
+    QSGTexture *t = 0;
     if (image.width() < m_atlas_size_limit && image.height() < m_atlas_size_limit) {
-        QSGTexture *t = 0;
 
         // If we have a larger atlas, try to allocate in that one, so we get as many
         // images as possible batched together.
@@ -129,9 +129,7 @@ QSGTexture *TextureAtlasManager::create(const QImage &image)
             return t;
     }
 
-    QSGPlainTexture *pt = new QSGPlainTexture();
-    pt->setImage(image);
-    return pt;
+    return t;
 }
 
 TextureAtlas::TextureAtlas(const QSize &size)

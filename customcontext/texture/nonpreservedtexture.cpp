@@ -1,5 +1,6 @@
 #include "nonpreservedtexture.h"
 
+#include "context.h"
 #include <private/qsgtexture_p.h>
 
 namespace CustomContext {
@@ -14,8 +15,8 @@ namespace CustomContext {
     system with only a single window that is never hidden or re-exposed.
 */
 
-NonPreservedTextureFactory::NonPreservedTextureFactory(const QImage &image)
-    : m_image(image)
+NonPreservedTextureFactory::NonPreservedTextureFactory(const QImage &image, Context *context)
+    : m_image(image), m_context(context)
 {
     m_size = m_image.size();
     m_byteCount = m_image.byteCount();
@@ -23,6 +24,14 @@ NonPreservedTextureFactory::NonPreservedTextureFactory(const QImage &image)
 
 QSGTexture *NonPreservedTextureFactory::createTexture(QQuickWindow *) const
 {
+#ifdef CUSTOMCONTEXT_ATLASTEXTURE
+    if (m_context->m_atlasTexture) {
+        QSGTexture *atlasedTexture = m_context->m_atlasManager.create(m_image);
+        if (atlasedTexture)
+            return atlasedTexture;
+    }
+#endif
+
     QSGPlainTexture *t = new QSGPlainTexture();
     t->setImage(m_image);
     m_image = QImage();

@@ -123,6 +123,7 @@ private:
 
 #ifdef CUSTOMCONTEXT_NONPRESERVEDTEXTURE
     bool m_nonPreservedTexture;
+    friend class NonPreservedTextureFactory;
 #endif
 
 

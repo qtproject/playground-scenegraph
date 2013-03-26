@@ -7,11 +7,13 @@
 
 namespace CustomContext {
 
+class Context;
+
 class NonPreservedTextureFactory : public QQuickTextureFactory
 {
     Q_OBJECT
 public:
-    NonPreservedTextureFactory(const QImage &image);
+    NonPreservedTextureFactory(const QImage &image, Context *context);
 
     QSGTexture *createTexture(QQuickWindow *window) const;
     QSize textureSize() const { return m_size; }
@@ -22,6 +24,7 @@ private:
     mutable QImage m_image;
     QSize m_size;
     int m_byteCount;
+    Context *m_context;
 };
 
 }

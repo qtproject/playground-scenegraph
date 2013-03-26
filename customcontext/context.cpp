@@ -278,8 +278,11 @@ QSurfaceFormat Context::defaultSurfaceFormat() const
 QSGTexture *Context::createTexture(const QImage &image) const
 {
 #ifdef CUSTOMCONTEXT_ATLASTEXTURE
-    if (m_atlasTexture)
-        return const_cast<Context *>(this)->m_atlasManager.create(image);
+    if (m_atlasTexture) {
+        QSGTexture *t = const_cast<Context *>(this)->m_atlasManager.create(image);
+        if (t)
+            return t;
+    }
 #endif
 
 #ifdef CUSTOMCONTEXT_MACTEXTURE
@@ -330,7 +333,7 @@ QQuickTextureFactory *Context::createTextureFactory(const QImage &image)
 
 #ifdef CUSTOMCONTEXT_NONPRESERVEDTEXTURE
     if (m_nonPreservedTexture)
-        return new NonPreservedTextureFactory(image);
+        return new NonPreservedTextureFactory(image, this);
 #endif
 
     return 0;
