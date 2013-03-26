@@ -71,6 +71,10 @@
 #include "mactexture.h"
 #endif
 
+#ifdef CUSTOMCONTEXT_NONPRESERVEDTEXTURE
+#include "nonpreservedtexture.h"
+#endif
+
 
 
 namespace CustomContext
@@ -126,6 +130,10 @@ Context::Context(QObject *parent)
     connect(this, SIGNAL(invalidated()), &m_threadUploadManager, SLOT(invalidated()), Qt::DirectConnection);
 #endif
 
+#ifdef CUSTOMCONTEXT_NONPRESERVEDTEXTURE
+    m_nonPreservedTexture = qgetenv("CUSTOMCONTEXT_NO_NONPRESERVEDTEXTURE").isEmpty();
+#endif
+
 
 
 #ifdef CUSTOMCONTEXT_DEBUG
@@ -153,6 +161,9 @@ Context::Context(QObject *parent)
 #endif
 #ifdef CUSTOMCONTEXT_MACTEXTURE
     qDebug(" - mac textures: %s", m_macTexture ? "yes" : "no");
+#endif
+#ifdef CUSTOMCONTEXT_NONPRESERVEDTEXTURE
+    qDebug(" - non preserved textures: %s", m_nonPreservedTexture ? "yes" : "no");
 #endif
 
 #ifdef CUSTOMCONTEXT_DITHER
@@ -315,6 +326,11 @@ QQuickTextureFactory *Context::createTextureFactory(const QImage &image)
 #ifdef CUSTOMCONTEXT_THREADUPLOADTEXTURE
     if (m_threadUploadTexture)
         return m_threadUploadManager.create(image);
+#endif
+
+#ifdef CUSTOMCONTEXT_NONPRESERVEDTEXTURE
+    if (m_nonPreservedTexture)
+        return new NonPreservedTextureFactory(image);
 #endif
 
     return 0;

@@ -121,6 +121,10 @@ private:
     bool m_threadUploadTexture;
 #endif
 
+#ifdef CUSTOMCONTEXT_NONPRESERVEDTEXTURE
+    bool m_nonPreservedTexture;
+#endif
+
 
 
 };

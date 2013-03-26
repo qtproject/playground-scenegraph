@@ -67,6 +67,16 @@ mactexture:{
     message("mactexture ...............: no")
 }
 
+nonpreservedtexture:{
+    message("nonpreservedtexture ......: yes")
+    DEFINES += CUSTOMCONTEXT_NONPRESERVEDTEXTURE
+    SOURCES += texture/nonpreservedtexture.cpp
+    HEADERS += texture/nonpreservedtexture.h
+    INCLUDEPATH += texture
+} else {
+    message("nonpreservedtexture ......: no")
+}
+
 
 
 ############################################################
