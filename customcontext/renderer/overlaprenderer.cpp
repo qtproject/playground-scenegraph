@@ -798,9 +798,6 @@ void Renderer::removeNode(QSGNode *node)
         RenderElement *e = m_elementHash.value(node, 0);
         Q_ASSERT(e);
 
-        std::vector<RenderElement *>::iterator it = m_elementsInRenderOrder.begin();
-        std::vector<RenderElement *>::iterator end = m_elementsInRenderOrder.end();
-
         m_elementHash.remove(node);
 
         if (e->vertices)
