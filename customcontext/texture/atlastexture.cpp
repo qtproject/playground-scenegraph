@@ -48,11 +48,6 @@
 
 #include <private/qsgtexture_p.h>
 
-// "small" is defined as "char" on Windows.
-#ifdef small
-#undef small
-#endif
-
 #ifndef GL_BGRA
 #define GL_BGRA 0x80E1
 #endif
@@ -75,15 +70,15 @@ int get_env_int(const char *name, int defaultValue)
 }
 
 TextureAtlasManager::TextureAtlasManager()
-    : m_small_atlas(0)
-    , m_large_atlas(0)
+    : m_primary_atlas(0)
+    , m_secondary_atlas(0)
 {
-    int small = get_env_int("CustomContext_SMALL_ATLAS_SIZE", 1024);
-    int large = get_env_int("CustomContext_LARGE_ATLAS_SIZE", 2048);
+    int primary = get_env_int("CustomContext_PRIMARY_ATLAS_SIZE", 1024);
+    int secondary = get_env_int("CustomContext_SECONDARY_ATLAS_SIZE", 2048);
 
     m_atlas_size_limit = get_env_int("CustomContext_ATLAS_SIZE_LIMIT", 256);
-    m_small_atlas_size = QSize(small, small);
-    m_large_atlas_size = QSize(large, large);
+    m_primary_atlas_size = QSize(primary, primary);
+    m_secondary_atlas_size = QSize(secondary, secondary);
 }
 
 
@@ -94,35 +89,40 @@ TextureAtlasManager::~TextureAtlasManager()
 
 void TextureAtlasManager::invalidate()
 {
-    delete m_small_atlas;
-    m_small_atlas = 0;
-    delete m_large_atlas;
-    m_large_atlas = 0;
+    delete m_primary_atlas;
+    m_primary_atlas = 0;
+    delete m_secondary_atlas;
+    m_secondary_atlas = 0;
 }
 
+void TextureAtlasManager::preload()
+{
+    m_primary_atlas = new TextureAtlas(m_primary_atlas_size);
+    m_primary_atlas->bind();
+}
 
 QSGTexture *TextureAtlasManager::create(const QImage &image)
 {
     QSGTexture *t = 0;
     if (image.width() < m_atlas_size_limit && image.height() < m_atlas_size_limit) {
 
-        // If we have a larger atlas, try to allocate in that one, so we get as many
+        // If the secondary atlas is larger, try to allocate in that one, so we get as many
         // images as possible batched together.
-        if (m_large_atlas) {
-            t = m_large_atlas->create(image);
+        if (m_secondary_atlas && m_secondary_atlas_size.width() > m_primary_atlas_size.width()) {
+            t = m_secondary_atlas->create(image);
             if (t)
                 return t;
         }
 
-        if (!m_small_atlas)
-            m_small_atlas = new TextureAtlas(m_small_atlas_size);
-        t = m_small_atlas->create(image);
+        if (!m_primary_atlas)
+            m_primary_atlas = new TextureAtlas(m_primary_atlas_size);
+        t = m_primary_atlas->create(image);
         if (t)
             return t;
 
-        if (!m_large_atlas)
-            m_large_atlas = new TextureAtlas(m_large_atlas_size);
-        t = m_large_atlas->create(image);
+        if (!m_secondary_atlas)
+            m_secondary_atlas = new TextureAtlas(m_secondary_atlas_size);
+        t = m_secondary_atlas->create(image);
         if (t)
             return t;
     }

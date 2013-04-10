@@ -64,13 +64,14 @@ public:
 
     QSGTexture *create(const QImage &image);
     void invalidate();
+    void preload();
 
 private:
-    TextureAtlas *m_small_atlas;
-    TextureAtlas *m_large_atlas;
+    TextureAtlas *m_primary_atlas;
+    TextureAtlas *m_secondary_atlas;
 
-    QSize m_small_atlas_size;
-    QSize m_large_atlas_size;
+    QSize m_primary_atlas_size;
+    QSize m_secondary_atlas_size;
     int m_atlas_size_limit;
 };
 

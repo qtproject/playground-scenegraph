@@ -223,6 +223,11 @@ void Context::initialize(QOpenGLContext *context)
             QSGDistanceFieldTextMaterial m;
             prepareMaterial(&m);
         }
+#ifdef CUSTOMCONTEXT_ATLASTEXTURE
+        if (m_atlasTexture) {
+            m_atlasManager.preload();
+        }
+#endif
     }
 #endif
 
