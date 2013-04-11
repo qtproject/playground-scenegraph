@@ -231,6 +231,24 @@ void Context::initialize(QOpenGLContext *context)
     }
 #endif
 
+#ifdef CUSTOMCONTEXT_OVERLAPRENDERER
+    if (m_overlapRenderer) {
+        m_clipProgram.addShaderFromSourceCode(QOpenGLShader::Vertex,
+                                            "attribute highp vec4 vCoord;       \n"
+                                            "uniform highp mat4 matrix;         \n"
+                                            "void main() {                      \n"
+                                            "    gl_Position = matrix * vCoord; \n"
+                                            "}");
+        m_clipProgram.addShaderFromSourceCode(QOpenGLShader::Fragment,
+                                            "void main() {                                   \n"
+                                            "    gl_FragColor = vec4(0.81, 0.83, 0.12, 1.0); \n" // Trolltech green ftw!
+                                            "}");
+        m_clipProgram.bindAttributeLocation("vCoord", 0);
+        m_clipProgram.link();
+        m_clipMatrixID = m_clipProgram.uniformLocation("matrix");
+    }
+#endif
+
 #ifdef CUSTOMCONTEXT_DEBUG
     qDebug("CustomContext: initialized..");
 #ifdef CUSTOMCONTEXT_MATERIALPRELOAD
@@ -303,8 +321,12 @@ QSGTexture *Context::createTexture(const QImage &image) const
 QSGRenderer *Context::createRenderer()
 {
 #ifdef CUSTOMCONTEXT_OVERLAPRENDERER
-    if (m_overlapRenderer)
-        return new OverlapRenderer::Renderer(this);
+    if (m_overlapRenderer) {
+        OverlapRenderer::Renderer *renderer =
+                new OverlapRenderer::Renderer(this);
+        renderer->setClipProgram(&m_clipProgram, m_clipMatrixID);
+        return renderer;
+    }
 #endif
     return QSGContext::createRenderer();
 }

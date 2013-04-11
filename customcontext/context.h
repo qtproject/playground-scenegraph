@@ -97,6 +97,8 @@ private:
 
 #ifdef CUSTOMCONTEXT_OVERLAPRENDERER
     bool m_overlapRenderer;
+    QOpenGLShaderProgram m_clipProgram;
+    int m_clipMatrixID;
 #endif
 
 #ifdef CUSTOMCONTEXT_ANIMATIONDRIVER

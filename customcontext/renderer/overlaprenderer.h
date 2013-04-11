@@ -332,6 +332,8 @@ public:
     void render();
     void nodeChanged(QSGNode *node, QSGNode::DirtyState flags);
 
+    void setClipProgram(QOpenGLShaderProgram *program, int matrixID);
+
 private:
 
     void buildRenderOrderList(QSGNode *node);
@@ -359,7 +361,7 @@ private:
     std::vector<VertexFormat *> m_vertexFormats;
     std::vector<RenderBatch> m_batches;
 
-    QOpenGLShaderProgram clipProgram;
+    QOpenGLShaderProgram *clipProgram;
     int clipMatrixID;
 
     int minBatchConfig;

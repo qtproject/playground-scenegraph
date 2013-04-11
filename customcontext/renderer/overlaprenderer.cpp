@@ -847,25 +847,15 @@ void Renderer::nodeChanged(QSGNode *node, QSGNode::DirtyState flags)
     }
 }
 
+void Renderer::setClipProgram(QOpenGLShaderProgram *program, int matrixID)
+{
+    clipProgram = program;
+    clipMatrixID = matrixID;
+}
+
 void Renderer::render()
 {
     PROFILE_BEGINFRAME();
-
-    if (!clipProgram.isLinked()) {
-        clipProgram.addShaderFromSourceCode(QOpenGLShader::Vertex,
-                                            "attribute highp vec4 vCoord;       \n"
-                                            "uniform highp mat4 matrix;         \n"
-                                            "void main() {                      \n"
-                                            "    gl_Position = matrix * vCoord; \n"
-                                            "}");
-        clipProgram.addShaderFromSourceCode(QOpenGLShader::Fragment,
-                                            "void main() {                                   \n"
-                                            "    gl_FragColor = vec4(0.81, 0.83, 0.12, 1.0); \n" // Trolltech green ftw!
-                                            "}");
-        clipProgram.bindAttributeLocation("vCoord", 0);
-        clipProgram.link();
-        clipMatrixID = clipProgram.uniformLocation("matrix");
-    }
 
     batchConfigs.clear();
     minBatchConfig = 0;
@@ -1641,8 +1631,9 @@ void Renderer::drawBatches()
                             glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
                             glDepthMask(GL_FALSE);
 
-                            clipProgram.bind();
-                            clipProgram.enableAttributeArray(0);
+                            Q_ASSERT(clipProgram);
+                            clipProgram->bind();
+                            clipProgram->enableAttributeArray(0);
 
                             currentClipType |= StencilClip;
                         }
@@ -1655,7 +1646,7 @@ void Renderer::drawBatches()
                         const QSGGeometry::Attribute *a = g->attributes();
                         glVertexAttribPointer(0, a->tupleSize, a->type, GL_FALSE, g->sizeOfVertex(), g->vertexData());
 
-                        clipProgram.setUniformValue(clipMatrixID, m);
+                        clipProgram->setUniformValue(clipMatrixID, m);
                         if (g->indexCount())
                             glDrawElements(g->drawingMode(), g->indexCount(), g->indexType(), g->indexData());
                         else
@@ -1669,7 +1660,7 @@ void Renderer::drawBatches()
                     clip = clip->clipList();
 
                     if (currentClipType & StencilClip) {
-                        clipProgram.disableAttributeArray(0);
+                        clipProgram->disableAttributeArray(0);
                         glStencilFunc(GL_EQUAL, m_current_stencil_value, 0xff); // stencil test, ref, test mask
                         glStencilOp(GL_KEEP, GL_KEEP, GL_KEEP); // stencil fail, z fail, z pass
                         glStencilMask(0); // write mask
