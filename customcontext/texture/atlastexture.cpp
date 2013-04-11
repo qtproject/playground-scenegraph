@@ -151,6 +151,7 @@ TextureAtlas::TextureAtlas(const QSize &size)
     m_externalFormat = GL_BGRA;
 #endif
 
+    m_use_bgra_fallback = !qgetenv("CustomContext_USE_BGRA_FALLBACK").isEmpty();
 }
 
 TextureAtlas::~TextureAtlas()
@@ -195,7 +196,7 @@ static void swizzleBGRAToRGBA(QImage *image)
     }
 }
 
-void TextureAtlas::uploadRgba(AtlasTexture *texture)
+void TextureAtlas::upload(AtlasTexture *texture)
 {
     const QImage &image = texture->image();
     const QRect &r = texture->atlasSubRect();
@@ -221,7 +222,8 @@ void TextureAtlas::uploadRgba(AtlasTexture *texture)
         p.drawImage(w - 1, h - 1, image, iw - 1, ih - 1, 1, 1);
     }
 
-    swizzleBGRAToRGBA(&tmp);
+    if (m_externalFormat == GL_RGBA)
+        swizzleBGRAToRGBA(&tmp);
     glTexSubImage2D(GL_TEXTURE_2D, 0, r.x(), r.y(), r.width(), r.height(), m_externalFormat, GL_UNSIGNED_BYTE, tmp.constBits());
 }
 
@@ -319,10 +321,11 @@ bool TextureAtlas::bind()
             timer.start();
 #endif
 
-        if (m_externalFormat == GL_RGBA) {
-            uploadRgba(m_pending_uploads.at(i));
-        } else {
+        if (m_externalFormat == GL_BGRA &&
+                !m_use_bgra_fallback) {
             uploadBgra(m_pending_uploads.at(i));
+        } else {
+            upload(m_pending_uploads.at(i));
         }
 #ifndef QSG_NO_RENDERER_TIMING
         if (qsg_render_timing) {

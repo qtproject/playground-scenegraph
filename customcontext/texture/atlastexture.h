@@ -86,7 +86,7 @@ public:
     int textureId() const;
     bool bind();
 
-    void uploadRgba(AtlasTexture *texture);
+    void upload(AtlasTexture *texture);
     void uploadBgra(AtlasTexture *texture);
 
     AtlasTexture *create(const QImage &image);
@@ -104,7 +104,7 @@ private:
     GLuint m_externalFormat;
 
     uint m_allocated : 1;
-
+    uint m_use_bgra_fallback: 1;
 };
 
 class AtlasTexture : public QSGTexture
