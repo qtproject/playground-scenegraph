@@ -102,6 +102,7 @@ Context::Context(QObject *parent)
 
 #ifdef CUSTOMCONTEXT_OVERLAPRENDERER
     m_overlapRenderer = qgetenv("CUSTOMCONTEXT_NO_OVERLAPRENDERER").isEmpty();
+    m_clipProgram = 0;
 #endif
 
 #ifdef CUSTOMCONTEXT_ANIMATIONDRIVER
@@ -233,19 +234,20 @@ void Context::initialize(QOpenGLContext *context)
 
 #ifdef CUSTOMCONTEXT_OVERLAPRENDERER
     if (m_overlapRenderer) {
-        m_clipProgram.addShaderFromSourceCode(QOpenGLShader::Vertex,
+        m_clipProgram = new QOpenGLShaderProgram();
+        m_clipProgram->addShaderFromSourceCode(QOpenGLShader::Vertex,
                                             "attribute highp vec4 vCoord;       \n"
                                             "uniform highp mat4 matrix;         \n"
                                             "void main() {                      \n"
                                             "    gl_Position = matrix * vCoord; \n"
                                             "}");
-        m_clipProgram.addShaderFromSourceCode(QOpenGLShader::Fragment,
+        m_clipProgram->addShaderFromSourceCode(QOpenGLShader::Fragment,
                                             "void main() {                                   \n"
                                             "    gl_FragColor = vec4(0.81, 0.83, 0.12, 1.0); \n" // Trolltech green ftw!
                                             "}");
-        m_clipProgram.bindAttributeLocation("vCoord", 0);
-        m_clipProgram.link();
-        m_clipMatrixID = m_clipProgram.uniformLocation("matrix");
+        m_clipProgram->bindAttributeLocation("vCoord", 0);
+        m_clipProgram->link();
+        m_clipMatrixID = m_clipProgram->uniformLocation("matrix");
     }
 #endif
 
@@ -276,6 +278,11 @@ void Context::invalidate()
 #ifdef CUSTOMCONTEXT_DITHER
     delete m_ditherProgram;
     m_ditherProgram = 0;
+#endif
+
+#ifdef CUSTOMCONTEXT_OVERLAPRENDERER
+    delete m_clipProgram;
+    m_clipProgram = 0;
 #endif
 
 #ifdef CUSTOMCONTEXT_ATLASTEXTURE
@@ -324,7 +331,7 @@ QSGRenderer *Context::createRenderer()
     if (m_overlapRenderer) {
         OverlapRenderer::Renderer *renderer =
                 new OverlapRenderer::Renderer(this);
-        renderer->setClipProgram(&m_clipProgram, m_clipMatrixID);
+        renderer->setClipProgram(m_clipProgram, m_clipMatrixID);
         return renderer;
     }
 #endif
