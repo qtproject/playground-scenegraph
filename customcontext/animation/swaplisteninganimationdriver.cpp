@@ -107,11 +107,9 @@ void SwapListeningAnimationDriver::advance()
     if (m_stableVsync > 0) {
         m_currentTime += m_stableVsync;
         if (m_currentTime + m_stableVsync < m_timer.elapsed()) {
-#ifdef CUSTOMCONTEXT_DEBUG
-            qDebug(" --- Swap Animation Driver: compensated animationTime=%d, actualTime=%d",
-                   (int) m_currentTime,
-                   (int) m_timer.elapsed());
-#endif
+//            qDebug(" --- Swap Animation Driver: compensated animationTime=%d, actualTime=%d",
+//                   (int) m_currentTime,
+//                   (int) m_timer.elapsed());
             m_currentTime = qFloor((m_timer.elapsed() / m_stableVsync) + 1) * m_stableVsync;
         }
     } else {
