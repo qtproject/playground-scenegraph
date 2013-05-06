@@ -1512,7 +1512,7 @@ void Renderer::buildDrawLists()
 
         BoundingArea united;
 
-        int current = i + 1;
+        int current = i;
 
         short nextIndex = ei->nextInBatchConfig;
         while (nextIndex != -1) {
@@ -1522,11 +1522,11 @@ void Renderer::buildDrawLists()
                     united.unite(ej->worldRect);
             }
 
-            current = nextIndex + 1;
+            current = nextIndex;
             RenderElement *ej = m_elementsInRenderOrder[nextIndex];
 
             Q_ASSERT(ej->batchConfig != -1 && batchConfigs[ej->batchConfig].renderNode == 0);
-            if (ej->addedToBatch == false && ej->vertexCount && (!united.intersects(ej->worldRect) || !isOverlap(i + 1, nextIndex, ej->worldRect))) {
+            if (ej->addedToBatch == false && ej->vertexCount && (!united.intersects(ej->worldRect) || !isOverlap(i, nextIndex, ej->worldRect))) {
                 rb.add(ej);
                 ej->addedToBatch = true;
             }
