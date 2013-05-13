@@ -54,6 +54,7 @@
 #include <private/qsgdefaultimagenode_p.h>
 #include <private/qsgdefaultrectanglenode_p.h>
 #include <private/qsgdistancefieldglyphnode_p_p.h>
+#include <private/qsgdefaultglyphnode_p.h>
 
 #ifdef CUSTOMCONTEXT_ANIMATIONDRIVER
 #include "animation/animationdriver.h"
@@ -169,6 +170,10 @@ Context::Context(QObject *parent)
 
 #ifdef CUSTOMCONTEXT_DITHER
     qDebug(" - ordered 2x2 dither: %s", m_dither ? "yes" : "no");
+#endif
+
+#ifdef CUSTOMCONTEXT_NO_DFGLYPHS
+    qDebug(" - distance fields disabled");
 #endif
 
 #endif
@@ -388,6 +393,15 @@ void Context::renderNextFrame(QSGRenderer *renderer, GLuint fbo)
     }
 #endif
 }
+
+
+
+#ifdef CUSTOMCONTEXT_NO_DFGLYPHS
+QSGGlyphNode *Context::createGlyphNode()
+{
+    return new QSGDefaultGlyphNode();
+}
+#endif
 
 
 

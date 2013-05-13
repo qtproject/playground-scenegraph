@@ -120,12 +120,23 @@ overlaprenderer:{
 
 
 
+############################################################
+#
+# Other stuff
+#
 
 materialpreload:{
     message("materialpreload ..........: yes")
     DEFINES += CUSTOMCONTEXT_MATERIALPRELOAD
 } else {
     message("materialpreload ..........: no")
+}
+
+nodfglyphs:{
+    message("nodfglyphs ...............: yes")
+    DEFINES += CUSTOMCONTEXT_NO_DFGLYPHS
+} else {
+    message("nodfglyphs ...............: no")
 }
 
 

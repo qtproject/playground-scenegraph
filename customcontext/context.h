@@ -80,6 +80,10 @@ public:
     QSGTexture *createTexture(const QImage &image) const;
     QQuickTextureFactory *createTextureFactory(const QImage &image);
 
+#ifdef CUSTOMCONTEXT_NO_DFGLYPHS
+    QSGGlyphNode *createGlyphNode();
+#endif
+
 private:
 
     int m_sampleCount;
