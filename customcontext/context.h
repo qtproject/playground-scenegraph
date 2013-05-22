@@ -80,6 +80,11 @@ public:
     QSGTexture *createTexture(const QImage &image) const;
     QQuickTextureFactory *createTextureFactory(const QImage &image);
 
+#ifdef CUSTOMCONTEXT_MSAA
+    QSGImageNode *createImageNode();
+    QSGRectangleNode *createRectangleNode();
+#endif
+
 #ifdef CUSTOMCONTEXT_NO_DFGLYPHS
     QSGGlyphNode *createGlyphNode();
 #endif
@@ -131,6 +136,12 @@ private:
     bool m_nonPreservedTexture;
     friend class NonPreservedTextureFactory;
 #endif
+
+#ifdef CUSTOMCONTEXT_MSAA
+    bool m_defaultRectangleNodes;
+    bool m_defaultImageNodes;
+#endif
+
 
 
 

@@ -76,6 +76,11 @@
 #include "nonpreservedtexture.h"
 #endif
 
+#ifdef CUSTOMCONTEXT_MSAA
+#include <private/qsgdefaultimagenode_p.h>
+#include <private/qsgdefaultrectanglenode_p.h>
+#endif
+
 
 
 namespace CustomContext
@@ -88,7 +93,7 @@ Context::Context(QObject *parent)
 {
     m_useMultisampling = qgetenv("CUSTOMCONTEXT_NO_MULTISAMPLE").isEmpty();
     if (m_useMultisampling) {
-        m_sampleCount= 4;
+        m_sampleCount= 16;
         QByteArray overrideSamples = qgetenv("CUSTOMCONTEXT_MULTISAMPLE_COUNT");
         bool ok;
         int override = overrideSamples.toInt(&ok);
@@ -136,6 +141,12 @@ Context::Context(QObject *parent)
     m_nonPreservedTexture = qgetenv("CUSTOMCONTEXT_NO_NONPRESERVEDTEXTURE").isEmpty();
 #endif
 
+#ifdef CUSTOMCONTEXT_MSAA
+    m_defaultImageNodes = qEnvironmentVariableIsSet("CUSTOMCONTEXT_DEFAULT_IMAGENODES");
+    m_defaultRectangleNodes = qEnvironmentVariableIsSet("CUSTOMCONTEXT_DEFAULT_RECTANGLENODES");
+#endif
+
+
 
 
 #ifdef CUSTOMCONTEXT_DEBUG
@@ -174,6 +185,11 @@ Context::Context(QObject *parent)
 
 #ifdef CUSTOMCONTEXT_NO_DFGLYPHS
     qDebug(" - distance fields disabled");
+#endif
+
+#ifdef CUSTOMCONTEXT_MSAA
+    qDebug(" - msaa rectangles: %s", !m_defaultRectangleNodes ? "yes" : "no");
+    qDebug(" - msaa images: %s", !m_defaultImageNodes ? "yes" : "no");
 #endif
 
 #endif
@@ -402,6 +418,30 @@ QSGGlyphNode *Context::createGlyphNode()
     return new QSGDefaultGlyphNode();
 }
 #endif
+
+#ifdef CUSTOMCONTEXT_MSAA
+
+class MSAAImageNode : public QSGDefaultImageNode {
+public:
+    void setAntialiasing(bool) { }
+};
+
+class MSAARectangleNode : public QSGDefaultRectangleNode {
+public:
+    void setAntialiasing(bool) { }
+};
+
+QSGImageNode *Context::createImageNode()
+{
+    return m_defaultImageNodes ? QSGContext::createImageNode() : new MSAAImageNode();
+}
+
+QSGRectangleNode *Context::createRectangleNode()
+{
+    return m_defaultRectangleNodes ? QSGContext::createRectangleNode() : new MSAARectangleNode();
+}
+#endif
+
 
 
 

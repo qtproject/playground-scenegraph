@@ -139,6 +139,13 @@ nodfglyphs:{
     message("nodfglyphs ...............: no")
 }
 
+msaa:{
+    message("msaa .....................: yes")
+    DEFINES += CUSTOMCONTEXT_MSAA
+} else {
+    message("msaa .....................: no")
+}
+
 
 
 message("");
