@@ -1,0 +1,8 @@
+<RCC>
+    <qresource prefix="/amd_compressed_atc_texture">
+        <file>images/qt-logo.jpg</file>
+        <file>images/qt-logo.dds</file>
+        <file>Label.qml</file>
+        <file>amd_compressed_atc_texture.qml</file>
+    </qresource>
+</RCC>
