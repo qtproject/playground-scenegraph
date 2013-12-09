@@ -96,6 +96,8 @@ Rectangle {
         width: label.width + 50
         height: label.height + 50
 
+        clip: true;
+
         SequentialAnimation on x {
             NumberAnimation { to: root.width - box.width; duration: 8047 }
             NumberAnimation { to: 0; duration: 8047 }
