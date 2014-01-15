@@ -16,6 +16,7 @@ verbose:{
 
 
 
+
 ############################################################
 #
 # Rendering hooks
@@ -146,6 +147,12 @@ msaa:{
     message("msaa .....................: no")
 }
 
+surfaceformat:{
+    message("surfaceformat ............: yes")
+    DEFINES += CUSTOMCONTEXT_SURFACEFORMAT
+} else {
+    message("surfaceformat ............: no")
+}
 
 
 message("");

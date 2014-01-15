@@ -76,7 +76,9 @@ public:
 
     QAnimationDriver *createAnimationDriver(QObject *parent);
     QSGRenderer *createRenderer();
+#ifdef CUSTOMCONTEXT_SURFACEFORMAT
     QSurfaceFormat defaultSurfaceFormat() const;
+#endif
     QSGTexture *createTexture(const QImage &image) const;
     QQuickTextureFactory *createTextureFactory(const QImage &image);
 
