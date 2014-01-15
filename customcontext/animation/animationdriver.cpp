@@ -48,30 +48,12 @@
 
 namespace CustomContext {
 
-float get_env_float(const char *name, float defaultValue)
-{
-    QByteArray content = qgetenv(name);
-
-    bool ok = false;
-    float value = content.toFloat(&ok);
-    return ok ? value : defaultValue;
-}
-
-
 AnimationDriver::AnimationDriver()
     : m_stable_vsync(-1)
     , m_current_animation_time(0)
-    , m_current_animation_delay(0)
-    , m_current_animation_catchup(0)
 {
     m_last_updated.invalidate();
     m_timer.invalidate();
-
-    // threshold for doing a non-smooth jump is 250ms
-    m_threshold_for_catchup = get_env_float("QML_ANIMATION_DRIVER_CATCHUP_THRESHOLD", 250);
-
-    // Try to catch up over 20 frames.
-    m_catchup_ratio = get_env_float("QML_ANIMATION_DRIVER_CATCHUP_RATIO", 0.05);
 }
 
 void AnimationDriver::maybeUpdateDelta()
@@ -79,9 +61,12 @@ void AnimationDriver::maybeUpdateDelta()
     // No point in updating it too frequently...
     if (m_last_updated.elapsed() < 30000 && m_last_updated.isValid())
         return;
-
     m_stable_vsync = 1000.0 / QGuiApplication::primaryScreen()->refreshRate();
     m_last_updated.restart();
+
+#ifdef CUSTOMCONTEXT_DEBUG
+    qDebug("CustomContext: AnimationDriver uses vsync=%f", m_stable_vsync);
+#endif
 }
 
 qint64 AnimationDriver::elapsed() const
@@ -97,8 +82,6 @@ void AnimationDriver::start()
     QAnimationDriver::start();
     m_timer.restart();
     m_current_animation_time = 0;
-    m_current_animation_delay = 0;
-    m_current_animation_catchup = 0;
 }
 
 
@@ -109,31 +92,11 @@ void AnimationDriver::advance()
     if (m_stable_vsync < 0) {
         m_current_animation_time = m_timer.elapsed();
     } else {
-
-        m_current_animation_time += m_stable_vsync + m_current_animation_catchup;
-        m_current_animation_delay -= m_current_animation_catchup;
-
-        if (m_current_animation_delay < m_current_animation_catchup*0.5) {
-            // Caught up after a dropped frame
-            m_current_animation_delay = 0.0;
-            m_current_animation_catchup = 0.0;
-        }
-
-        if (m_current_animation_time < m_timer.elapsed()) {
-            m_current_animation_delay = m_timer.elapsed() - m_current_animation_time;
-#ifdef CUSTOMCONTEXT_DEBUG
-            qDebug("CustomContext: animation needs compensation, calculated=%f, real=%f", (float) m_current_animation_time, (float) m_timer.elapsed());
-#endif
-            m_current_animation_time = qFloor((m_timer.elapsed() / m_stable_vsync) + 1) * m_stable_vsync;
-
-            if (m_current_animation_delay > m_threshold_for_catchup) {
-                // If we are far behind, don't try the smooth catchup, just jump
-                m_current_animation_time += m_current_animation_delay;
-                m_current_animation_delay = 0.0;
-            }
-            m_current_animation_catchup = m_current_animation_delay * m_catchup_ratio; // Catch up over 20 frames
-        }
-    }
+       m_current_animation_time += m_stable_vsync;
+        if (m_current_animation_time + m_stable_vsync < m_timer.elapsed()) {
+            m_current_animation_time = (qFloor(m_timer.elapsed() / m_stable_vsync) + 1.0f) * m_stable_vsync;
+       }
+   }
 
     QAnimationDriver::advanceAnimation(startTime() + m_current_animation_time);
 }
