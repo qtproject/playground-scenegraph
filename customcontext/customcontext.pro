@@ -3,7 +3,15 @@ TARGET=customcontext
 
 CONFIG += plugin
 
-QT += gui-private core-private quick-private qml-private v8-private
+contains(QT_VERSION, ^5\\.[2-9]\\..*) {
+    message("Using Qt 5.2 or later")
+    CONFIG += customcontext_qt520
+}
+
+QT += gui-private core-private quick-private qml-private
+!customcontext_qt520:{
+    QT += v8-private
+}
 
 message("")
 
@@ -13,7 +21,6 @@ verbose:{
 } else {
     message("verbose ..................: no")
 }
-
 
 
 
@@ -38,46 +45,47 @@ dither:{
 # Textures
 #
 
-atlastexture:{
-    message("atlastexture .............: yes")
-    DEFINES += CUSTOMCONTEXT_ATLASTEXTURE
-    SOURCES += texture/atlastexture.cpp
-    HEADERS += texture/atlastexture.h
-    INCLUDEPATH += texture
-} else {
-    message("atlastexture .............: no")
-}
+!customcontext_qt520:{
+    atlastexture:{
+        message("atlastexture .............: yes")
+        DEFINES += CUSTOMCONTEXT_ATLASTEXTURE
+        SOURCES += texture/atlastexture.cpp
+        HEADERS += texture/atlastexture.h
+        INCLUDEPATH += texture
+    } else {
+        message("atlastexture .............: no")
+    }
 
-threaduploadtexture:{
-    message("threaduploadtexture ......: yes")
-    DEFINES += CUSTOMCONTEXT_THREADUPLOADTEXTURE
-    SOURCES += texture/threaduploadtexture.cpp
-    HEADERS += texture/threaduploadtexture.h
-    INCLUDEPATH += texture
-} else {
-    message("threaduploadtexture ......: no")
-}
+    threaduploadtexture:{
+        message("threaduploadtexture ......: yes")
+        DEFINES += CUSTOMCONTEXT_THREADUPLOADTEXTURE
+        SOURCES += texture/threaduploadtexture.cpp
+        HEADERS += texture/threaduploadtexture.h
+        INCLUDEPATH += texture
+    } else {
+        message("threaduploadtexture ......: no")
+    }
 
-mactexture:{
-    message("mactexture ...............: yes")
-    DEFINES += CUSTOMCONTEXT_MACTEXTURE
-    SOURCES += texture/mactexture.cpp
-    HEADERS += texture/mactexture.h
-    INCLUDEPATH += texture
-} else {
-    message("mactexture ...............: no")
-}
+    mactexture:{
+        message("mactexture ...............: yes")
+        DEFINES += CUSTOMCONTEXT_MACTEXTURE
+        SOURCES += texture/mactexture.cpp
+        HEADERS += texture/mactexture.h
+        INCLUDEPATH += texture
+    } else {
+        message("mactexture ...............: no")
+    }
 
-nonpreservedtexture:{
-    message("nonpreservedtexture ......: yes")
-    DEFINES += CUSTOMCONTEXT_NONPRESERVEDTEXTURE
-    SOURCES += texture/nonpreservedtexture.cpp
-    HEADERS += texture/nonpreservedtexture.h
-    INCLUDEPATH += texture
-} else {
-    message("nonpreservedtexture ......: no")
+    nonpreservedtexture:{
+        message("nonpreservedtexture ......: yes")
+        DEFINES += CUSTOMCONTEXT_NONPRESERVEDTEXTURE
+        SOURCES += texture/nonpreservedtexture.cpp
+        HEADERS += texture/nonpreservedtexture.h
+        INCLUDEPATH += texture
+    } else {
+        message("nonpreservedtexture ......: no")
+    }
 }
-
 
 
 ############################################################
@@ -110,13 +118,15 @@ swaplistenanimationdriver:{
 # Renderers
 #
 
-overlaprenderer:{
-    message("overlaprenderer ..........: yes")
-    DEFINES += CUSTOMCONTEXT_OVERLAPRENDERER
-    SOURCES += renderer/overlaprenderer.cpp
-    HEADERS += renderer/overlaprenderer.h
-} else {
-    message("overlaprenderer ..........: no")
+!customcontext_qt520:{
+    overlaprenderer:{
+        message("overlaprenderer ..........: yes")
+        DEFINES += CUSTOMCONTEXT_OVERLAPRENDERER
+        SOURCES += renderer/overlaprenderer.cpp
+        HEADERS += renderer/overlaprenderer.h
+    } else {
+        message("overlaprenderer ..........: no")
+    }
 }
 
 
@@ -126,26 +136,30 @@ overlaprenderer:{
 # Other stuff
 #
 
-materialpreload:{
-    message("materialpreload ..........: yes")
-    DEFINES += CUSTOMCONTEXT_MATERIALPRELOAD
-} else {
-    message("materialpreload ..........: no")
+!customcontext_qt520:{
+    materialpreload:{
+        message("materialpreload ..........: yes")
+        DEFINES += CUSTOMCONTEXT_MATERIALPRELOAD
+    } else {
+        message("materialpreload ..........: no")
+    }
+
+    nodfglyphs:{
+        message("nodfglyphs ...............: yes")
+        DEFINES += CUSTOMCONTEXT_NO_DFGLYPHS
+    } else {
+        message("nodfglyphs ...............: no")
+    }
+
+    msaa:{
+        message("msaa .....................: yes")
+        DEFINES += CUSTOMCONTEXT_MSAA
+    } else {
+        message("msaa .....................: no")
+    }
 }
 
-nodfglyphs:{
-    message("nodfglyphs ...............: yes")
-    DEFINES += CUSTOMCONTEXT_NO_DFGLYPHS
-} else {
-    message("nodfglyphs ...............: no")
-}
 
-msaa:{
-    message("msaa .....................: yes")
-    DEFINES += CUSTOMCONTEXT_MSAA
-} else {
-    message("msaa .....................: no")
-}
 
 surfaceformat:{
     message("surfaceformat ............: yes")

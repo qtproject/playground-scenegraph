@@ -81,10 +81,28 @@
 #include <private/qsgdefaultrectanglenode_p.h>
 #endif
 
-
+#if QT_VERSION >= 0x050200
+#define CONTEXT_CLASS RenderContext
+#define CONTEXT_CLASS_BASE QSGRenderContext
+#else
+#define CONTEXT_CLASS Context
+#define CONTEXT_CLASS_BASE QSGContext
+#endif
 
 namespace CustomContext
 {
+
+#if QT_VERSION >= 0x050200
+RenderContext::RenderContext(QSGContext *ctx)
+    : QSGRenderContext(ctx)
+{
+#ifdef CUSTOMCONTEXT_DITHER
+    m_dither = qgetenv("CUSTOMCONTEXT_NO_DITHER").isEmpty();
+    m_ditherProgram = 0;
+    qDebug(" - ordered 2x2 dither: %s", m_dither ? "yes" : "no");
+#endif
+}
+#endif
 
 Context::Context(QObject *parent)
     : QSGContext(parent)
@@ -127,11 +145,6 @@ Context::Context(QObject *parent)
     m_macTexture = qgetenv("CUSTOMCONTEXT_NO_MACTEXTURE").isEmpty();
 #endif
 
-#ifdef CUSTOMCONTEXT_DITHER
-    m_dither= qgetenv("CUSTOMCONTEXT_NO_DITHER").isEmpty();
-    m_ditherProgram = 0;
-#endif
-
 #ifdef CUSTOMCONTEXT_THREADUPLOADTEXTURE
     m_threadUploadTexture = qgetenv("CUSTOMCONTEXT_NO_THREADUPLOADTEXTURE").isEmpty();
     connect(this, SIGNAL(invalidated()), &m_threadUploadManager, SLOT(invalidated()), Qt::DirectConnection);
@@ -146,8 +159,12 @@ Context::Context(QObject *parent)
     m_defaultRectangleNodes = qEnvironmentVariableIsSet("CUSTOMCONTEXT_DEFAULT_RECTANGLENODES");
 #endif
 
-
-
+#if QT_VERSION < 0x050200
+#ifdef CUSTOMCONTEXT_DITHER
+    m_dither = qgetenv("CUSTOMCONTEXT_NO_DITHER").isEmpty();
+    m_ditherProgram = 0;
+#endif
+#endif
 
 #ifdef CUSTOMCONTEXT_DEBUG
     qDebug("CustomContext created:");
@@ -179,8 +196,10 @@ Context::Context(QObject *parent)
     qDebug(" - non preserved textures: %s", m_nonPreservedTexture ? "yes" : "no");
 #endif
 
+#if QT_VERSION < 0x050200
 #ifdef CUSTOMCONTEXT_DITHER
     qDebug(" - ordered 2x2 dither: %s", m_dither ? "yes" : "no");
+#endif
 #endif
 
 #ifdef CUSTOMCONTEXT_NO_DFGLYPHS
@@ -198,7 +217,7 @@ Context::Context(QObject *parent)
 
 
 
-void Context::initialize(QOpenGLContext *context)
+void CONTEXT_CLASS::initialize(QOpenGLContext *context)
 {
 
 #ifdef CUSTOMCONTEXT_DITHER
@@ -278,6 +297,7 @@ void Context::initialize(QOpenGLContext *context)
     if (m_materialPreloading)
         qDebug(" - Standard materials compiled in: %d ms", (int) prepareTimer.elapsed());
 #endif
+#if QT_VERSION < 0x050200
     qDebug(" - OpenGL extensions: %s", glGetString(GL_EXTENSIONS));
     qDebug(" - OpenGL Vendor: %s", glGetString(GL_VENDOR));
     qDebug(" - OpenGL Version: %s", glGetString(GL_VERSION));
@@ -287,14 +307,14 @@ void Context::initialize(QOpenGLContext *context)
     glGetIntegerv(GL_MAX_TEXTURE_SIZE, &textureSize);
     qDebug(" - GL Max Texture Size: %d", textureSize);
 #endif
+#endif
 
-
-    QSGContext::initialize(context);
+    CONTEXT_CLASS_BASE::initialize(context);
 }
 
-void Context::invalidate()
+void CONTEXT_CLASS::invalidate()
 {
-    QSGContext::invalidate();
+    CONTEXT_CLASS_BASE::invalidate();
 
 #ifdef CUSTOMCONTEXT_DITHER
     delete m_ditherProgram;
@@ -327,7 +347,7 @@ QSurfaceFormat Context::defaultSurfaceFormat() const
 
 
 
-QSGTexture *Context::createTexture(const QImage &image) const
+QSGTexture *CONTEXT_CLASS::createTexture(const QImage &image) const
 {
 #ifdef CUSTOMCONTEXT_ATLASTEXTURE
     if (m_atlasTexture) {
@@ -342,12 +362,12 @@ QSGTexture *Context::createTexture(const QImage &image) const
         return new MacTexture(image);
 #endif
 
-    return QSGContext::createTexture(image);
+    return CONTEXT_CLASS_BASE::createTexture(image);
 }
 
 
 
-QSGRenderer *Context::createRenderer()
+QSGRenderer *CONTEXT_CLASS::createRenderer()
 {
 #ifdef CUSTOMCONTEXT_OVERLAPRENDERER
     if (m_overlapRenderer) {
@@ -357,7 +377,7 @@ QSGRenderer *Context::createRenderer()
         return renderer;
     }
 #endif
-    return QSGContext::createRenderer();
+    return CONTEXT_CLASS_BASE::createRenderer();
 }
 
 
@@ -397,13 +417,13 @@ QQuickTextureFactory *Context::createTextureFactory(const QImage &image)
 
 
 
-void Context::renderNextFrame(QSGRenderer *renderer, GLuint fbo)
+void CONTEXT_CLASS::renderNextFrame(QSGRenderer *renderer, GLuint fbo)
 {
-    QSGContext::renderNextFrame(renderer, fbo);
+    CONTEXT_CLASS_BASE::renderNextFrame(renderer, fbo);
 
 #ifdef CUSTOMCONTEXT_DITHER
     if (m_dither) {
-        QSurface *s = glContext()->surface();
+        QSurface *s = QOpenGLContext::currentContext()->surface();
         QSize size = static_cast<QWindow *>(s)->size();
         m_ditherProgram->prepare();
         m_ditherProgram->draw(size.width(), size.height());
