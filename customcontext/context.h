@@ -148,12 +148,12 @@ private:
     bool m_threadUploadTexture;
 #endif
 
+#endif // Qt < 5.2.0
+
 #ifdef CUSTOMCONTEXT_NONPRESERVEDTEXTURE
     bool m_nonPreservedTexture;
     friend class NonPreservedTextureFactory;
 #endif
-
-#endif // Qt < 5.2.0
 
 #ifdef CUSTOMCONTEXT_ANIMATIONDRIVER
     bool m_animationDriver;
