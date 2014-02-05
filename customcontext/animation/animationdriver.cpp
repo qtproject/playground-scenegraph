@@ -1,6 +1,7 @@
 /****************************************************************************
 **
 ** Copyright (C) 2013 Digia Plc and/or its subsidiary(-ies).
+** Copyright (C) 2014 Jolla Ltd, author: <gunnar.sletta@jollamobile.com>
 ** Contact: http://www.qt-project.org/legal
 **
 ** This file is part of the Scenegraph Playground module of the Qt Toolkit.
@@ -46,59 +47,112 @@
 #include <qpa/qplatformnativeinterface.h>
 #include <private/qguiapplication_p.h>
 
+#define THRESHOLD_FOR_HARD_SWITCH 100
+#define THRESHOLD_FOR_SOFT_SWITCH 100
+#define CATCHUP_RATE 1
+
 namespace CustomContext {
 
 AnimationDriver::AnimationDriver()
-    : m_stable_vsync(-1)
-    , m_current_animation_time(0)
+    : m_vsyncDelta(-1)
+    , m_animationTime(0)
+    , m_timeMode(PredictedTime)
+    , m_badFrameTime(-1)
 {
-    m_last_updated.invalidate();
-    m_timer.invalidate();
+    m_queryVsyncTimer.invalidate();
+    m_animationTimer.invalidate();
 }
 
 void AnimationDriver::maybeUpdateDelta()
 {
     // No point in updating it too frequently...
-    if (m_last_updated.elapsed() < 30000 && m_last_updated.isValid())
+    if (m_queryVsyncTimer.elapsed() < 30000 && m_queryVsyncTimer.isValid())
         return;
-    m_stable_vsync = 1000.0 / QGuiApplication::primaryScreen()->refreshRate();
-    m_last_updated.restart();
+    m_vsyncDelta = 1000.0 / QGuiApplication::primaryScreen()->refreshRate();
+    m_queryVsyncTimer.restart();
 
 #ifdef CUSTOMCONTEXT_DEBUG
-    qDebug("CustomContext: AnimationDriver uses vsync=%f", m_stable_vsync);
+    qDebug("CustomContext: AnimationDriver uses vsync=%f", m_vsyncDelta);
 #endif
 }
 
 qint64 AnimationDriver::elapsed() const
 {
-    if (!isRunning() || m_stable_vsync < -1)
-        return startTime() + m_timer.elapsed();
+    if (!isRunning() || m_vsyncDelta < 0 || m_timeMode == CurrentTime)
+        return startTime() + m_animationTimer.elapsed();
     else
-        return startTime() + m_current_animation_time;
+        return startTime() + m_animationTime;
 }
 
 void AnimationDriver::start()
 {
     QAnimationDriver::start();
-    m_timer.restart();
-    m_current_animation_time = 0;
+    m_animationTimer.restart();
+    m_animationTime = 0;
+    m_badFrameTime = -1;
 }
-
 
 void AnimationDriver::advance()
 {
     maybeUpdateDelta();
+    float currentTime = m_animationTimer.elapsed();
 
-    if (m_stable_vsync < 0) {
-        m_current_animation_time = m_timer.elapsed();
-    } else {
-       m_current_animation_time += m_stable_vsync;
-        if (m_current_animation_time + m_stable_vsync < m_timer.elapsed()) {
-            m_current_animation_time = (qFloor(m_timer.elapsed() / m_stable_vsync) + 1.0f) * m_stable_vsync;
-       }
-   }
+    if (m_vsyncDelta < 0) {
+        m_animationTime = currentTime;
+        QAnimationDriver::advanceAnimation(startTime() + m_animationTime);
+        return;
+    }
 
-    QAnimationDriver::advanceAnimation(startTime() + m_current_animation_time);
+    m_animationTime += m_vsyncDelta;
+    float drift = currentTime - m_animationTime;
+
+    bool badFrame = drift > m_vsyncDelta * 0.1; // We're lagging behind, tolerate a 10% error compared to vsync.
+
+    // If we are drifting behind with this much, we jump and force time-based
+    if (drift > THRESHOLD_FOR_HARD_SWITCH) {
+//        printf("animation driver crossed threshold for hard switch... drift=%f, animationTime=%f, currentTime=%f\n",
+//               drift, m_animationTime, currentTime);
+        m_timeMode = CurrentTime;
+        m_animationTime = m_animationTimer.elapsed();
+
+    } else if (m_timeMode == PredictedTime) {
+        if (badFrame) {
+            if (m_badFrameTime > 0 && currentTime - m_badFrameTime < THRESHOLD_FOR_SOFT_SWITCH) {
+//                printf("animation lagged twice recently: first=%f, currentTime=%f, drift=%f\n",
+//                       m_badFrameTime, currentTime, drift);
+                m_timeMode = CurrentTime;
+                m_animationTime = currentTime;
+            }
+            m_badFrameTime = currentTime;
+
+        } else if (drift > CATCHUP_RATE) {
+            // Slowly catch up when we are lagging behind.
+            m_animationTime += CATCHUP_RATE;
+
+        } else if (drift < - 2 * m_vsyncDelta) {
+            // This will only happen if the m_vsyncDelta value is higher than
+            // the actual vsync delta. When it is, we will accumulate a drift
+            // ahead of current time which can result in jumps when switching
+            // to CurrentTime.
+            m_animationTime -= CATCHUP_RATE;
+        }
+
+    } else if (m_timeMode == CurrentTime) {
+        if (badFrame) {
+            m_badFrameTime = currentTime;
+        } else if (m_badFrameTime > 0 && currentTime - m_badFrameTime > THRESHOLD_FOR_SOFT_SWITCH) {
+//            printf("animation had good frames for a while: last-bad=%f, currentTime=%f, animTime=%f, drift=%f\n",
+//                   m_badFrameTime, currentTime, m_animationTime, drift);
+            m_timeMode = PredictedTime;
+        }
+        m_animationTime = currentTime;
+    }
+
+//    printf(" - (%s) advancing by: startTime=%d, animTime=%d, current=%d %s\n",
+//           m_timeMode == PredictedTime ? "pre" : "cur",
+//           (int) startTime(), (int) m_animationTime, (int) currentTime, badFrame ? "*bad*" : "");
+
+    QAnimationDriver::advanceAnimation(startTime() + m_animationTime);
 }
 
 }

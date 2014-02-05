@@ -1,6 +1,7 @@
 /****************************************************************************
 **
 ** Copyright (C) 2013 Digia Plc and/or its subsidiary(-ies).
+** Copyright (C) 2014 Jolla Ltd, author: <gunnar.sletta@jollamobile.com>
 ** Contact: http://www.qt-project.org/legal
 **
 ** This file is part of the Scenegraph Playground module of the Qt Toolkit.
@@ -47,14 +48,17 @@
 #include <qelapsedtimer.h>
 #include <qmath.h>
 
-#define FRAME_SMOOTH_COUNT 60 * 2
-
 namespace CustomContext
 {
 
 class AnimationDriver : public QAnimationDriver
 {
 public:
+    enum TimeMode {
+        PredictedTime,
+        CurrentTime
+    };
+
     AnimationDriver();
 
     void start();
@@ -65,11 +69,16 @@ public:
     virtual qint64 elapsed() const;
 
 private:
-    QElapsedTimer m_timer;
-    QElapsedTimer m_last_updated;
+    QElapsedTimer m_animationTimer;
+    QElapsedTimer m_queryVsyncTimer;
 
-    float m_stable_vsync;
-    float m_current_animation_time;
+    float m_vsyncDelta;
+    float m_animationTime;
+
+    TimeMode m_timeMode;
+
+    float m_badFrameTime;
+
 };
 
 }
