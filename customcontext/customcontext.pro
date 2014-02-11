@@ -119,15 +119,24 @@ swaplistenanimationdriver:{
 # Renderers
 #
 
-!customcontext_qt520:{
-    overlaprenderer:{
-        message("overlaprenderer ..........: yes")
-        DEFINES += CUSTOMCONTEXT_OVERLAPRENDERER
-        SOURCES += renderer/overlaprenderer.cpp
-        HEADERS += renderer/overlaprenderer.h
-    } else {
-        message("overlaprenderer ..........: no")
+overlaprenderer:{
+    message("overlaprenderer ..........: yes")
+    customcontext_qt520:{
+        message("  *** WARNING: you probably want to be using the default renderer in Qt 5.2 and higher")
+        message("  as it incorporates the optimizations of the overlaprenderer along with other optimizations ***")
+
+        materialpreload:{
+            message("  materialpreload ........: yes")
+            DEFINES += CUSTOMCONTEXT_MATERIALPRELOAD
+        } else {
+            message("  materialpreload ........: no")
+        }
     }
+    DEFINES += CUSTOMCONTEXT_OVERLAPRENDERER
+    SOURCES += renderer/overlaprenderer.cpp
+    HEADERS += renderer/overlaprenderer.h
+} else {
+    message("overlaprenderer ..........: no")
 }
 
 

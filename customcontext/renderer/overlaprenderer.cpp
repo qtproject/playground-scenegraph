@@ -42,8 +42,10 @@
 #define GL_GLEXT_PROTOTYPES
 
 #include "overlaprenderer.h"
+#include "context.h"
 #include "qsgmaterial.h"
 #include "private/qsgrendernode_p.h"
+#include "private/qsgnodeupdater_p.h"
 
 #include <QtCore/qvarlengtharray.h>
 #include <QtCore/qpair.h>
@@ -749,7 +751,11 @@ void RenderBatch::build()
     }
 }
 
+#if QT_VERSION >= 0x050200
+Renderer::Renderer(QSGRenderContext *context)
+#else
 Renderer::Renderer(QSGContext *context)
+#endif
     : QSGRenderer(context)
 {
 }
@@ -845,6 +851,20 @@ void Renderer::nodeChanged(QSGNode *node, QSGNode::DirtyState flags)
     if (flags & (QSGNode::DirtyMatrix | QSGNode::DirtyMaterial | QSGNode::DirtyOpacity | QSGNode::DirtyForceUpdate)) {
         dirtyChildNodes_Transform(node);
     }
+
+#if QT_VERSION >= 0x050200
+    QSGNode::DirtyState dirtyChain = flags & QSGNode::DirtyPropagationMask;
+    markNodeDirtyState(node, dirtyChain);
+
+    if (dirtyChain != 0) {
+        dirtyChain = QSGNode::DirtyState(dirtyChain << 16);
+        QSGNode *parent = node->parent();
+        while (parent) {
+            markNodeDirtyState(parent, dirtyChain);
+            parent = parent->parent();
+        }
+    }
+#endif
 }
 
 void Renderer::setClipProgram(QOpenGLShaderProgram *program, int matrixID)
@@ -1739,11 +1759,31 @@ void Renderer::drawBatches()
             updates |= QSGMaterialShader::RenderState::DirtyOpacity;
             m_current_determinant = bc->determinant;
 
+#if QT_VERSION < 0x050200
             QSGMaterialShader *shader = m_context->prepareMaterial(bc->material);
+#else
+            QSGMaterialShader *shader = static_cast<CustomContext::RenderContext*>(m_context)->prepareMaterial(bc->material);
+#endif
             if (shader != currentShader) {
                 Q_ASSERT(shader->program()->isLinked());
-                if (currentShader)
+                if (currentShader) {
+#if QT_VERSION >= 0x050200
+                    char const *const *attr = currentShader->attributeNames();
+                    for (int j = 0; attr[j]; ++j) {
+                        if (*attr[j])
+                            currentShader->program()->disableAttributeArray(j);
+                    }
+#endif
                     currentShader->deactivate();
+                }
+#if QT_VERSION >= 0x050200
+                shader->program()->bind();
+                char const *const *attr = shader->attributeNames();
+                for (int j = 0; attr[j]; ++j) {
+                    if (*attr[j])
+                        shader->program()->enableAttributeArray(j);
+                }
+#endif
                 shader->activate();
                 currentShader = shader;
             }

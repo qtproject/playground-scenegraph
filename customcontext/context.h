@@ -44,6 +44,7 @@
 #define CONTEXT_H
 
 #include <private/qsgcontext_p.h>
+#include <QtCore/QElapsedTimer>
 #include <QtGui/QOpenGLShaderProgram>
 
 #ifdef CUSTOMCONTEXT_DITHER
@@ -59,6 +60,9 @@
 #endif
 
 
+#if QT_VERSION >= 0x050200
+struct QSGMaterialType;
+#endif
 
 namespace CustomContext
 {
@@ -81,6 +85,20 @@ public:
 #ifdef CUSTOMCONTEXT_DITHER
     bool m_dither;
     OrderedDither2x2 *m_ditherProgram;
+#endif
+
+#ifdef CUSTOMCONTEXT_OVERLAPRENDERER
+    bool m_overlapRenderer;
+    QOpenGLShaderProgram *m_clipProgram;
+    int m_clipMatrixID;
+
+    QElapsedTimer qsg_renderer_timer;
+    QSGMaterialShader *prepareMaterial(QSGMaterial *material);
+    QHash<QSGMaterialType *, QSGMaterialShader *> m_materials;
+
+#ifdef CUSTOMCONTEXT_MATERIALPRELOAD
+    bool m_materialPreloading;
+#endif
 #endif
 };
 #endif
@@ -122,11 +140,11 @@ private:
     uint m_useMultisampling : 1;
     uint m_depthBuffer : 1;
 
+#if QT_VERSION < 0x50200
+
 #ifdef CUSTOMCONTEXT_MATERIALPRELOAD
     bool m_materialPreloading;
 #endif
-
-#if QT_VERSION < 0x50200
 
 #ifdef CUSTOMCONTEXT_DITHER
     bool m_dither;

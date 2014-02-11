@@ -89,6 +89,12 @@
 #define CONTEXT_CLASS_BASE QSGContext
 #endif
 
+#if QT_VERSION >= 0x050200
+#ifndef QSG_NO_RENDERER_TIMING
+static bool qsg_render_timing = !qgetenv("QSG_RENDER_TIMING").isEmpty();
+#endif
+#endif
+
 namespace CustomContext
 {
 
@@ -101,8 +107,44 @@ RenderContext::RenderContext(QSGContext *ctx)
     m_ditherProgram = 0;
     qDebug(" - ordered 2x2 dither: %s", m_dither ? "yes" : "no");
 #endif
-}
+
+#ifdef CUSTOMCONTEXT_OVERLAPRENDERER
+    m_overlapRenderer = qgetenv("CUSTOMCONTEXT_NO_OVERLAPRENDERER").isEmpty();
+    m_clipProgram = 0;
+    qDebug(" - overlaprenderer: %s", m_overlapRenderer ? "yes" : "no");
+#ifdef CUSTOMCONTEXT_MATERIALPRELOAD
+    qDebug(" - material preload: %s", m_materialPreloading ? "yes" : "no");
 #endif
+#endif
+}
+
+#ifdef CUSTOMCONTEXT_OVERLAPRENDERER
+QSGMaterialShader *RenderContext::prepareMaterial(QSGMaterial *material)
+{
+    QSGMaterialType *type = material->type();
+    QSGMaterialShader *shader = m_materials.value(type);
+    if (shader)
+        return shader;
+
+#ifndef QSG_NO_RENDER_TIMING
+    if (qsg_render_timing)
+        qsg_renderer_timer.start();
+#endif
+
+    shader = material->createShader();
+    compile(shader, material);
+    QSGRenderContext::initialize(shader);
+    m_materials[type] = shader;
+
+#ifndef QSG_NO_RENDER_TIMING
+    if (qsg_render_timing)
+        printf("   - compiling material: %dms\n", (int) qsg_renderer_timer.elapsed());
+#endif
+
+    return shader;
+}
+#endif  //CUSTOMCONTEXT_OVERLAPRENDERER
+#endif  //QT_VERSION >= 0x050200
 
 Context::Context(QObject *parent)
     : QSGContext(parent)
@@ -119,15 +161,7 @@ Context::Context(QObject *parent)
             m_sampleCount = override;
     }
 
-#ifdef CUSTOMCONTEXT_MATERIALPRELOAD
-    m_materialPreloading = qgetenv("CUSTOMCONTEXT_NO_MATERIAL_PRELOADING").isEmpty();
-#endif
     m_depthBuffer = qgetenv("CUSTOMCONTEXT_NO_DEPTH_BUFFER").isEmpty();
-
-#ifdef CUSTOMCONTEXT_OVERLAPRENDERER
-    m_overlapRenderer = qgetenv("CUSTOMCONTEXT_NO_OVERLAPRENDERER").isEmpty();
-    m_clipProgram = 0;
-#endif
 
 #ifdef CUSTOMCONTEXT_ANIMATIONDRIVER
     m_animationDriver = qgetenv("CUSTOMCONTEXT_NO_ANIMATIONDRIVER").isEmpty();
@@ -164,7 +198,16 @@ Context::Context(QObject *parent)
     m_dither = qgetenv("CUSTOMCONTEXT_NO_DITHER").isEmpty();
     m_ditherProgram = 0;
 #endif
+
+#ifdef CUSTOMCONTEXT_OVERLAPRENDERER
+    m_overlapRenderer = qgetenv("CUSTOMCONTEXT_NO_OVERLAPRENDERER").isEmpty();
+    m_clipProgram = 0;
 #endif
+
+#ifdef CUSTOMCONTEXT_MATERIALPRELOAD
+    m_materialPreloading = qgetenv("CUSTOMCONTEXT_NO_MATERIAL_PRELOADING").isEmpty();
+#endif
+#endif  //QT_VERSION < 0x050200
 
 #ifdef CUSTOMCONTEXT_DEBUG
     qDebug("CustomContext created:");
@@ -175,12 +218,6 @@ Context::Context(QObject *parent)
     qDebug(" - program binary: yes");
 #endif
 
-#ifdef CUSTOMCONTEXT_MATERIALPRELOAD
-    qDebug(" - material preload: %s", m_materialPreloading ? "yes" : "no");
-#endif
-#ifdef CUSTOMCONTEXT_OVERLAPRENDERER
-    qDebug(" - overlaprenderer: %s", m_overlapRenderer ? "yes" : "no");
-#endif
 #ifdef CUSTOMCONTEXT_SWAPLISTENINGANIMATIONDRIVER
     qDebug(" - swap listening animation driver: %s", m_swapListeningAnimationDriver ? "yes" : "no");
 #endif
@@ -204,7 +241,13 @@ Context::Context(QObject *parent)
 #ifdef CUSTOMCONTEXT_DITHER
     qDebug(" - ordered 2x2 dither: %s", m_dither ? "yes" : "no");
 #endif
+#ifdef CUSTOMCONTEXT_OVERLAPRENDERER
+    qDebug(" - overlaprenderer: %s", m_overlapRenderer ? "yes" : "no");
 #endif
+#ifdef CUSTOMCONTEXT_MATERIALPRELOAD
+    qDebug(" - material preload: %s", m_materialPreloading ? "yes" : "no");
+#endif
+#endif  //QT_VERSION < 0x050200
 
 #ifdef CUSTOMCONTEXT_NO_DFGLYPHS
     qDebug(" - distance fields disabled");

@@ -326,7 +326,12 @@ class Renderer : public QSGRenderer
 {
     Q_OBJECT
 public:
+#if QT_VERSION >= 0x050200
+    Renderer(QSGRenderContext *context);
+#else
     Renderer(QSGContext *context);
+#endif
+
     ~Renderer();
 
     void render();
