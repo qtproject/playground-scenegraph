@@ -171,6 +171,10 @@ Context::Context(QObject *parent)
     qDebug(" - multisampling: %s, samples=%d", m_useMultisampling ? "yes" : "no", m_sampleCount);
     qDebug(" - depth buffer: %s", m_depthBuffer ? "yes" : "no");
 
+#ifdef PROGRAM_BINARY
+    qDebug(" - program binary: yes");
+#endif
+
 #ifdef CUSTOMCONTEXT_MATERIALPRELOAD
     qDebug(" - material preload: %s", m_materialPreloading ? "yes" : "no");
 #endif

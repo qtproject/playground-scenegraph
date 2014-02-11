@@ -158,9 +158,15 @@ swaplistenanimationdriver:{
     } else {
         message("msaa .....................: no")
     }
+} else {
+    programbinary: {
+        message("programbinary ............: yes")
+        DEFINES += PROGRAM_BINARY
+        SOURCES += programbinary.cpp
+    } else {
+        message("programbinary ............: no")
+    }
 }
-
-
 
 surfaceformat:{
     message("surfaceformat ............: yes")
