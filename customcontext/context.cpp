@@ -113,6 +113,7 @@ RenderContext::RenderContext(QSGContext *ctx)
     m_clipProgram = 0;
     qDebug(" - overlaprenderer: %s", m_overlapRenderer ? "yes" : "no");
 #ifdef CUSTOMCONTEXT_MATERIALPRELOAD
+    m_materialPreloading = qgetenv("CUSTOMCONTEXT_NO_MATERIAL_PRELOADING").isEmpty();
     qDebug(" - material preload: %s", m_materialPreloading ? "yes" : "no");
 #endif
 #endif
