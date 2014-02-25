@@ -77,6 +77,19 @@ dither:{
     }
 }
 
+eglgralloctexture:{
+    message("eglgralloctexture ........: yes (remember: ANDROID_SDK_INCLUDE)")
+    DEFINES += CUSTOMCONTEXT_EGLGRALLOCTEXTURE
+    SOURCES += texture/eglgralloctexture.cpp
+    HEADERS += texture/eglgralloctexture.h
+
+    INCLUDEPATH += texture $(ANDROID_SDK_INCLUDE) $(ANDROID_SDK_INCLUDE)/android
+    LIBS += -lhardware
+
+} else {
+    message("eglgralloctexure .........: no")
+}
+
 nonpreservedtexture:{
     message("nonpreservedtexture ......: yes")
     DEFINES += CUSTOMCONTEXT_NONPRESERVEDTEXTURE

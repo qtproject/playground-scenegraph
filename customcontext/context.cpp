@@ -76,6 +76,10 @@
 #include "nonpreservedtexture.h"
 #endif
 
+#ifdef CUSTOMCONTEXT_EGLGRALLOCTEXTURE
+#include "eglgralloctexture.h"
+#endif
+
 #ifdef CUSTOMCONTEXT_MSAA
 #include <private/qsgdefaultimagenode_p.h>
 #include <private/qsgdefaultrectanglenode_p.h>
@@ -180,6 +184,10 @@ Context::Context(QObject *parent)
     m_macTexture = qgetenv("CUSTOMCONTEXT_NO_MACTEXTURE").isEmpty();
 #endif
 
+#ifdef CUSTOMCONTEXT_EGLGRALLOCTEXTURE
+    m_eglGrallocTexture = qEnvironmentVariableIsEmpty("CUSTOMCONTEXT_NO_EGLGRALLOCTEXTURE");
+#endif
+
 #ifdef CUSTOMCONTEXT_THREADUPLOADTEXTURE
     m_threadUploadTexture = qgetenv("CUSTOMCONTEXT_NO_THREADUPLOADTEXTURE").isEmpty();
     connect(this, SIGNAL(invalidated()), &m_threadUploadManager, SLOT(invalidated()), Qt::DirectConnection);
@@ -230,6 +238,9 @@ Context::Context(QObject *parent)
 #endif
 #ifdef CUSTOMCONTEXT_THREADUPLOADTEXTURE
     qDebug(" - threaded texture upload: %s", m_threadUploadTexture ? "yes" : "no");
+#endif
+#ifdef CUSTOMCONTEXT_EGLGRALLOCTEXTURE
+    qDebug(" - EGLImage/Gralloc based texture: %s", m_eglGrallocTexture ? "yes" : "no");
 #endif
 #ifdef CUSTOMCONTEXT_MACTEXTURE
     qDebug(" - mac textures: %s", m_macTexture ? "yes" : "no");
@@ -449,6 +460,14 @@ QAnimationDriver *Context::createAnimationDriver(QObject *parent)
 QQuickTextureFactory *Context::createTextureFactory(const QImage &image)
 {
     Q_UNUSED(image);
+
+#ifdef CUSTOMCONTEXT_EGLGRALLOCTEXTURE
+    if (m_eglGrallocTexture) {
+        EglGrallocTextureFactory *tf = EglGrallocTextureFactory::create(image);
+        if (tf)
+            return tf;
+    }
+#endif
 
 #ifdef CUSTOMCONTEXT_THREADUPLOADTEXTURE
     if (m_threadUploadTexture)

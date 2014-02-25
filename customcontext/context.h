@@ -191,8 +191,9 @@ private:
     bool m_defaultImageNodes;
 #endif
 
-
-
+#ifdef CUSTOMCONTEXT_EGLGRALLOCTEXTURE
+    bool m_eglGrallocTexture;
+#endif
 
 };
 
