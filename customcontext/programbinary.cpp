@@ -45,6 +45,7 @@
 #include <QtCore/QFile>
 #include <QtCore/QSaveFile>
 #include <QtCore/QDir>
+#include <QtCore/QDateTime>
 #include <QtCore/QElapsedTimer>
 
 #include <QtQuick/qsgmaterial.h>
@@ -98,12 +99,24 @@ struct ProgramBinary
     QByteArray fsh;
 };
 
+int get_env_int(const char *name, int defaultValue)
+{
+    QByteArray v = qgetenv(name);
+    bool ok;
+    int value = v.toInt(&ok);
+    if (!ok)
+        value = defaultValue;
+    return value;
+}
+
 class ProgramBinaryStore
 {
 public:
     ProgramBinaryStore()
         : m_hash(QCryptographicHash::Sha1)
     {
+        m_maxShaderCount = get_env_int("QSG_PROGRAM_BINARY_LIMIT", 512);
+
         m_location = QString::fromLocal8Bit(qgetenv("QSG_PROGRAM_BINARY_STORE"));
         if (m_location.isEmpty()) {
             QString base = QString::fromLocal8Bit(qgetenv("XDG_RUNTIME_DIR"));
@@ -136,6 +149,8 @@ public:
     void insert(ProgramBinary *shader);
     void purge(const QByteArray &key);
 
+    void sanityCheck();
+
     void compileAndInsert(QSGRenderContext *rc, const QByteArray &key, QSGMaterialShader *s, QSGMaterial *m, const char *v, const char *f);
 
 private:
@@ -144,6 +159,8 @@ private:
     QMutex m_mutex;
 
     QString m_location;
+
+    int m_maxShaderCount;
 
     static ProgramBinaryStore *instance;
 };
@@ -182,7 +199,7 @@ ProgramBinary *ProgramBinaryStore::lookup(const QByteArray key)
 
 void ProgramBinaryStore::insert(ProgramBinary *shader)
 {
-    QMutexLocker lock(&m_mutex);
+    m_mutex.lock();
 
     m_store.insert(shader->key, shader);
 
@@ -193,6 +210,10 @@ void ProgramBinaryStore::insert(ProgramBinary *shader)
         stream << shader->blob;
         file.commit();
     }
+
+    m_mutex.unlock();
+
+    sanityCheck();
 }
 
 void ProgramBinaryStore::purge(const QByteArray &key)
@@ -269,6 +290,49 @@ void RenderContext::compile(QSGMaterialShader *shader, QSGMaterial *material, co
             // If it failed, purge the binary from the store and compile and insert a new one.
             store->purge(key);
             store->compileAndInsert(this, key, shader, material, vertex, fragment);
+        }
+    }
+}
+
+static bool sortByAccessTime(const QFileInfo &a, const QFileInfo &b)
+{
+    return a.lastRead() < b.lastRead();
+}
+
+/* The primary goal of the sanity check is that we should not
+ * pollute the file system with an infinite amount of shaders,
+ * even if each one is fairly small.
+ *
+ * Pollution can quite easily happen because of QML and ShaderEffect.
+ * For instance, if an application has a shader effect editor which
+ * changes the fragment/vertex strings every few seconds the file system
+ * will fill up with thousands of unused shaders. Better to nuke them.
+ *
+ * If an app has "many" shaders check if the amount on disk is
+ * more than maxShaderCount. If so, delete them so we are left with
+ * maxShaderCount/2. We also nuke the store, as the programs
+ * themselves are anyway cached by the renderers and recovering them
+ * from disk again is cheapish.
+ *
+ * Multiple processes with different maxShaderCount will work against
+ * different counts, so they might end up conflicting, but the default
+ * value is set high enough for this to not be a problem and since the
+ * store is user-local. If he/she changes it to a low value, it is their
+ * problem.
+ */
+void ProgramBinaryStore::sanityCheck()
+{
+    if (m_store.size() > m_maxShaderCount) {
+        QDir dir(m_location);
+        QList<QFileInfo> infos = dir.entryInfoList(QDir::Files);
+#ifdef CUSTOMCONTEXT_DEBUG
+        qDebug() << " - BinaryProgramStore has" << m_store.size() << "entries in process," << infos.size() << "on disk..." << m_maxShaderCount;
+#endif
+        if (infos.size()) {
+            std::sort(&infos.first(), &infos.last() + 1, sortByAccessTime);
+            int firstToKeep = infos.size() - m_maxShaderCount / 2;
+            for (int i=0; i<firstToKeep; ++i)
+                purge(infos.at(i).fileName().toLocal8Bit());
         }
     }
 }
