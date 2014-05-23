@@ -79,7 +79,7 @@ _glEGLImageTargetTexture2DOES glEGLImageTargetTexture2DOES = 0;
 _eglCreateImageKHR eglCreateImageKHR = 0;
 _eglDestroyImageKHR eglDestroyImageKHR = 0;
 
-void initialize()
+static void initialize()
 {
     hw_get_module(GRALLOC_HARDWARE_MODULE_ID, (const hw_module_t **) &gralloc);
     gralloc_open((const hw_module_t *) gralloc, &alloc);
@@ -215,10 +215,34 @@ void NativeBuffer::release()
     handle = 0;
 }
 
+NativeBuffer *NativeBuffer::create(const QImage &image)
+{
+    if (image.width() * image.height() < 500 * 500)
+        return 0;
+
+    if (gralloc == 0) {
+        initialize();
+        if (!gralloc)
+            return 0;
+    }
+
+    NativeBuffer *buffer = new NativeBuffer(image);
+    if (buffer && !buffer->handle) {
+#ifdef CUSTOMCONTEXT_DEBUG
+        qDebug("EglGrallocTexture: failed to allocate native buffer for image: %d x %d", image.width(), image.height());
+#endif
+        delete buffer;
+        return 0;
+    }
+
+    return buffer;
+}
+
 EglGrallocTexture::EglGrallocTexture(NativeBuffer *buffer)
     : m_id(0)
     , m_buffer(buffer)
     , m_bound(false)
+    , m_ownsBuffer(false)
 {
     Q_ASSERT(buffer);
 #ifdef CUSTOMCONTEXT_DEBUG
@@ -230,6 +254,8 @@ EglGrallocTexture::~EglGrallocTexture()
 {
     if (m_id)
         glDeleteTextures(1, &m_id);
+    if (m_ownsBuffer)
+        delete m_buffer;
 }
 
 void EglGrallocTexture::bind()
@@ -280,6 +306,16 @@ bool EglGrallocTexture::hasMipmaps() const
     return false;
 }
 
+EglGrallocTexture *EglGrallocTexture::create(const QImage &image)
+{
+    NativeBuffer *buffer = NativeBuffer::create(image);
+    if (!buffer)
+        return 0;
+    EglGrallocTexture *texture = new EglGrallocTexture(buffer);
+    texture->m_ownsBuffer = true;
+    return texture;
+}
+
 EglGrallocTextureFactory::EglGrallocTextureFactory(NativeBuffer *buffer)
     : m_buffer(buffer)
 {
@@ -293,7 +329,7 @@ EglGrallocTextureFactory::~EglGrallocTextureFactory()
     m_buffer->releaseEglImage();
 }
 
-QSGTexture *EglGrallocTextureFactory::createTexture(QQuickWindow *window) const
+QSGTexture *EglGrallocTextureFactory::createTexture(QQuickWindow *) const
 {
     return new EglGrallocTexture(m_buffer);
 }
@@ -330,24 +366,8 @@ QImage EglGrallocTextureFactory::image() const
 
 EglGrallocTextureFactory *EglGrallocTextureFactory::create(const QImage &image)
 {
-    if (image.width() * image.height() < 500 * 500)
-        return 0;
-
-    if (gralloc == 0) {
-        initialize();
-        if (!gralloc)
-            return 0;
-    }
-
-    NativeBuffer *buffer = new NativeBuffer(image);
-    if (buffer && !buffer->handle) {
-#ifdef CUSTOMCONTEXT_DEBUG
-        qDebug("EglGrallocTextureFactory: failed to allocate native buffer for image: %d x %d", image.width(), image.height());
-#endif
-        delete buffer;
-        return 0;
-    }
-    return new EglGrallocTextureFactory(buffer);
+    NativeBuffer *buffer = NativeBuffer::create(image);
+    return buffer ? new EglGrallocTextureFactory(buffer) : 0;
 }
 
 }

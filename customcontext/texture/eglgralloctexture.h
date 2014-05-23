@@ -72,6 +72,8 @@ public:
 
     bool hasAlpha() const { return m_hasAlpha; }
 
+    static NativeBuffer *create(const QImage &image);
+
 private:
     QAtomicInt m_ref;
     EGLImageKHR m_eglImage;
@@ -91,10 +93,13 @@ public:
     virtual bool hasMipmaps() const;
     virtual void bind();
 
+    static EglGrallocTexture *create(const QImage &image);
+
 private:
     mutable GLuint m_id;
     NativeBuffer *m_buffer;
     bool m_bound;
+    bool m_ownsBuffer;
 };
 
 class EglGrallocTextureFactory : public QQuickTextureFactory

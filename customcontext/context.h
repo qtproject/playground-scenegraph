@@ -76,6 +76,7 @@ public:
     void invalidate();
     void renderNextFrame(QSGRenderer *renderer, GLuint fbo);
     QSGTexture *createTexture(const QImage &image) const;
+    QSGTexture *createTextureNoAtlas(const QImage &image) const;
     QSGRenderer *createRenderer();
 
 #ifdef PROGRAM_BINARY
@@ -134,6 +135,10 @@ public:
     QSGGlyphNode *createGlyphNode();
 #endif
 
+#ifdef CUSTOMCONTEXT_EGLGRALLOCTEXTURE
+    bool hasEglGrallocTextures() const { return m_eglGrallocTexture; }
+#endif
+
 private:
 
     int m_sampleCount;
@@ -141,6 +146,7 @@ private:
     uint m_depthBuffer : 1;
 
 #if QT_VERSION < 0x50200
+    friend class RenderContext;
 
 #ifdef CUSTOMCONTEXT_MATERIALPRELOAD
     bool m_materialPreloading;

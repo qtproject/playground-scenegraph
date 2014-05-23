@@ -424,6 +424,26 @@ QSGTexture *CONTEXT_CLASS::createTexture(const QImage &image) const
     return CONTEXT_CLASS_BASE::createTexture(image);
 }
 
+#if QT_VERSION >= 0x050200
+QSGTexture *RenderContext::createTextureNoAtlas(const QImage &image) const
+{
+#ifdef CUSTOMCONTEXT_EGLGRALLOCTEXTURE
+    if (static_cast<Context *>(sceneGraphContext())->hasEglGrallocTextures()) {
+
+        // Only use gralloc textures for textures created outside the render thread.
+        // They can still block for as long as normal texture, so better to not waste
+        // the precious resource.
+        if (openglContext() != 0 && openglContext()->thread() != QThread::currentThread()) {
+            EglGrallocTexture *t = EglGrallocTexture::create(image);
+            if (t)
+                return t;
+        }
+    }
+#endif
+    return CONTEXT_CLASS_BASE::createTextureNoAtlas(image);
+}
+#endif
+
 
 
 QSGRenderer *CONTEXT_CLASS::createRenderer()
