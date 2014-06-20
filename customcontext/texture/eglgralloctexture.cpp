@@ -51,7 +51,6 @@
 #include <android/hardware/gralloc.h>
 #include <android/system/window.h>
 
-
 #include <EGL/egl.h>
 #include <EGL/eglext.h>
 
@@ -59,6 +58,22 @@
 #define container_of(ptr, type, member) ({                  \
     const typeof( ((type *)0)->member ) *__mptr = (ptr);    \
     (type *)( (char *)__mptr - offsetof(type,member) );})
+
+// Taken from qdrawhelper_p.h
+static inline uint PREMUL(uint x) {
+    uint a = x >> 24;
+    uint t = (x & 0xff00ff) * a;
+    t = (t + ((t >> 8) & 0xff00ff) + 0x800080) >> 8;
+    t &= 0xff00ff;
+
+    x = ((x >> 8) & 0xff) * a;
+    x = (x + ((x >> 8) & 0xff) + 0x80);
+    x &= 0xff00;
+    x |= t | (a << 24);
+    return x;
+}
+static inline int qt_div_255(int x) { return (x + (x>>8) + 0x80) >> 8; }
+
 
 #ifndef QSG_NO_RENDER_TIMING
 static bool qsg_render_timing = !qgetenv("QSG_RENDER_TIMING").isEmpty();
@@ -96,8 +111,12 @@ static void initialize()
 NativeBuffer::NativeBuffer(const QImage &image)
 {
     m_hasAlpha = image.hasAlphaChannel();
-
-    format = HAL_PIXEL_FORMAT_BGRA_8888;
+    const QImage::Format iformat = image.format();
+    format = iformat == QImage::Format_RGBA8888_Premultiplied
+            || iformat == QImage::Format_RGBX8888
+            || iformat == QImage::Format_RGBA8888
+            ? HAL_PIXEL_FORMAT_RGBA_8888
+            : HAL_PIXEL_FORMAT_BGRA_8888;
     usage = GRALLOC_USAGE_SW_READ_RARELY | GRALLOC_USAGE_SW_WRITE_RARELY | GRALLOC_USAGE_HW_TEXTURE;
     width = image.width();
     height = image.height();
@@ -132,14 +151,44 @@ NativeBuffer::NativeBuffer(const QImage &image)
     quint64 lockTime = timer.elapsed();
 #endif
 
-    int dbpl = stride * 4;
-    if (dbpl == image.bytesPerLine()) {
-        memcpy(data, image.constBits(), image.byteCount());
+    bool simpleCopy = iformat == QImage::Format_ARGB32_Premultiplied
+            || iformat == QImage::Format_RGB32
+            || iformat == QImage::Format_RGBA8888_Premultiplied
+            || iformat == QImage::Format_RGBX8888;
+
+    const int dbpl = stride * 4;
+    const int h = image.height();
+    const int w = image.width();
+    if (simpleCopy) {
+        if (dbpl == image.bytesPerLine()) {
+            memcpy(data, image.constBits(), image.byteCount());
+        } else {
+            int bpl = qMin(dbpl, image.bytesPerLine());
+            for (int y=0; y<h; ++y)
+                memcpy(data + y * dbpl, image.constScanLine(y), bpl);
+        }
     } else {
-        int h = image.height();
-        int bpl = qMin(dbpl, image.bytesPerLine());
-        for (int y=0; y<h; ++y)
-            memcpy(data + y * dbpl, image.scanLine(y), bpl);
+        if (iformat == QImage::Format_ARGB32) {
+            for (int y=0; y<h; ++y) {
+                const uint *src = (const uint *) image.constScanLine(y);
+                uint *dst = (uint *) (data + dbpl * y);
+                for (int x=0; x<w; ++x)
+                    dst[x] = PREMUL(src[x]);
+            }
+        } else { // QImage::Format_RGBA88888 (non-premultiplied)
+            for (int y=0; y<h; ++y) {
+                const uchar *src = image.constScanLine(y);
+                uchar *dst = (uchar *) (data + dbpl * y);
+                for (int x=0; x<w; ++x) {
+                    int p = x<<2;
+                    uint a = src[p + 3];
+                    dst[p  ] = qt_div_255(src[p  ] * a);
+                    dst[p+1] = qt_div_255(src[p+1] * a);
+                    dst[p+2] = qt_div_255(src[p+2] * a);
+                    dst[p+3] = a;
+                }
+            }
+        }
     }
 
 #ifdef CUSTOMCONTEXT_DEBUG
@@ -217,7 +266,7 @@ void NativeBuffer::release()
 
 NativeBuffer *NativeBuffer::create(const QImage &image)
 {
-    if (image.width() * image.height() < 500 * 500)
+    if (image.width() * image.height() < 500 * 500 || image.depth() != 32)
         return 0;
 
     if (gralloc == 0) {
