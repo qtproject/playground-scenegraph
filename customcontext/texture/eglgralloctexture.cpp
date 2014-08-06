@@ -211,8 +211,13 @@ NativeBuffer::NativeBuffer(const QImage &image)
                                    (ANativeWindowBuffer *) this,
                                    0);
 
-    if (!m_eglImage)
-        qFatal("no egl image...");
+    if (!m_eglImage) {
+#ifdef CUSTOMCONTEXT_DEBUG
+        qDebug("EglGrallocTexture: failed to create EGLImage, error=%x", eglGetError());
+#endif
+        release();
+        return;
+    }
 
 #ifdef CUSTOMCONTEXT_DEBUG
     quint64 imageTime = timer.elapsed();
