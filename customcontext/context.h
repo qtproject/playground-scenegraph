@@ -139,6 +139,10 @@ public:
     bool hasEglGrallocTextures() const { return m_eglGrallocTexture; }
 #endif
 
+#ifdef CUSTOMCONTEXT_HYBRISTEXTURE
+    bool hasHybrisTextures() const { return m_hybrisTexture; }
+#endif
+
 private:
 
     int m_sampleCount;
@@ -199,6 +203,10 @@ private:
 
 #ifdef CUSTOMCONTEXT_EGLGRALLOCTEXTURE
     bool m_eglGrallocTexture;
+#endif
+
+#ifdef CUSTOMCONTEXT_HYBRISTEXTURE
+    bool m_hybrisTexture;
 #endif
 
 };

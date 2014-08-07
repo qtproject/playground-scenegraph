@@ -80,6 +80,10 @@
 #include "eglgralloctexture.h"
 #endif
 
+#ifdef CUSTOMCONTEXT_HYBRISTEXTURE
+#include "hybristexture.h"
+#endif
+
 #ifdef CUSTOMCONTEXT_MSAA
 #include <private/qsgdefaultimagenode_p.h>
 #include <private/qsgdefaultrectanglenode_p.h>
@@ -188,6 +192,14 @@ Context::Context(QObject *parent)
     m_eglGrallocTexture = qEnvironmentVariableIsEmpty("CUSTOMCONTEXT_NO_EGLGRALLOCTEXTURE");
 #endif
 
+#ifdef CUSTOMCONTEXT_HYBRISTEXTURE
+    m_hybrisTexture = qEnvironmentVariableIsEmpty("CUSTOMCONTEXT_NO_HYBRISTEXTURE");
+    if (m_hybrisTexture && strstr(eglQueryString(eglGetDisplay(EGL_DEFAULT_DISPLAY), EGL_EXTENSIONS), "EGL_HYBRIS_native_buffer") == 0) {
+        qDebug() << "EGL_HYBRIS_native_buffer is not available...";
+        m_hybrisTexture = false;
+    }
+#endif
+
 #ifdef CUSTOMCONTEXT_THREADUPLOADTEXTURE
     m_threadUploadTexture = qgetenv("CUSTOMCONTEXT_NO_THREADUPLOADTEXTURE").isEmpty();
     connect(this, SIGNAL(invalidated()), &m_threadUploadManager, SLOT(invalidated()), Qt::DirectConnection);
@@ -241,6 +253,9 @@ Context::Context(QObject *parent)
 #endif
 #ifdef CUSTOMCONTEXT_EGLGRALLOCTEXTURE
     qDebug(" - EGLImage/Gralloc based texture: %s", m_eglGrallocTexture ? "yes" : "no");
+#endif
+#ifdef CUSTOMCONTEXT_HYBRISTEXTURE
+    qDebug(" - EGL/Hybris based texture: %s", m_hybrisTexture ? "yes" : "no");
 #endif
 #ifdef CUSTOMCONTEXT_MACTEXTURE
     qDebug(" - mac textures: %s", m_macTexture ? "yes" : "no");
@@ -440,6 +455,20 @@ QSGTexture *RenderContext::createTextureNoAtlas(const QImage &image) const
         }
     }
 #endif
+#ifdef CUSTOMCONTEXT_HYBRISTEXTURE
+    if (static_cast<Context *>(sceneGraphContext())->hasHybrisTextures()) {
+
+        // Only use hybris textures for textures created outside the render thread.
+        // They can still block for as long as normal texture, so better to not waste
+        // the precious resource.
+        if (openglContext() != 0 && openglContext()->thread() != QThread::currentThread()) {
+            HybrisTexture *t = HybrisTexture::create(image);
+            if (t)
+                return t;
+        }
+    }
+#endif
+
     return CONTEXT_CLASS_BASE::createTextureNoAtlas(image);
 }
 #endif
@@ -480,6 +509,14 @@ QAnimationDriver *Context::createAnimationDriver(QObject *parent)
 QQuickTextureFactory *Context::createTextureFactory(const QImage &image)
 {
     Q_UNUSED(image);
+
+#ifdef CUSTOMCONTEXT_HYBRISTEXTURE
+    if (m_hybrisTexture) {
+        HybrisTextureFactory *tf = HybrisTextureFactory::create(image);
+        if (tf)
+            return tf;
+    }
+#endif
 
 #ifdef CUSTOMCONTEXT_EGLGRALLOCTEXTURE
     if (m_eglGrallocTexture) {

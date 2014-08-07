@@ -90,6 +90,17 @@ eglgralloctexture:{
     message("eglgralloctexure .........: no")
 }
 
+hybristexture :{
+    message("hybristexture ............: yes")
+    DEFINES += CUSTOMCONTEXT_HYBRISTEXTURE
+    SOURCES += texture/hybristexture.cpp
+    HEADERS += texture/hybristexture.h
+    INCLUDEPATH += texture
+
+} else {
+    message("hybristexture ............: no")
+}
+
 nonpreservedtexture:{
     message("nonpreservedtexture ......: yes")
     DEFINES += CUSTOMCONTEXT_NONPRESERVEDTEXTURE
