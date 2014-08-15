@@ -112,6 +112,7 @@ public:
 
 #if QT_VERSION >= 0x050200
     QSGRenderContext *createRenderContext() { return new RenderContext(this); }
+    void renderContextInitialized(QSGRenderContext *renderContext) Q_DECL_OVERRIDE;
 #else
     void initialize(QOpenGLContext *context);
     void invalidate();

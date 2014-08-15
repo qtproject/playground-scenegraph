@@ -159,6 +159,9 @@ Context::Context(QObject *parent)
     : QSGContext(parent)
     , m_sampleCount(0)
     , m_useMultisampling(false)
+#ifdef CUSTOMCONTEXT_USE_HYBRISTEXTURE
+    , m_hybrisTexture(false)
+#endif
 {
     m_useMultisampling = !qgetenv("CUSTOMCONTEXT_MULTISAMPLE").isEmpty();
     if (m_useMultisampling) {
@@ -190,14 +193,6 @@ Context::Context(QObject *parent)
 
 #ifdef CUSTOMCONTEXT_EGLGRALLOCTEXTURE
     m_eglGrallocTexture = qEnvironmentVariableIsEmpty("CUSTOMCONTEXT_NO_EGLGRALLOCTEXTURE");
-#endif
-
-#ifdef CUSTOMCONTEXT_HYBRISTEXTURE
-    m_hybrisTexture = qEnvironmentVariableIsEmpty("CUSTOMCONTEXT_NO_HYBRISTEXTURE");
-    if (m_hybrisTexture && strstr(eglQueryString(eglGetDisplay(EGL_DEFAULT_DISPLAY), EGL_EXTENSIONS), "EGL_HYBRIS_native_buffer") == 0) {
-        qDebug() << "EGL_HYBRIS_native_buffer is not available...";
-        m_hybrisTexture = false;
-    }
 #endif
 
 #ifdef CUSTOMCONTEXT_THREADUPLOADTEXTURE
@@ -254,9 +249,6 @@ Context::Context(QObject *parent)
 #ifdef CUSTOMCONTEXT_EGLGRALLOCTEXTURE
     qDebug(" - EGLImage/Gralloc based texture: %s", m_eglGrallocTexture ? "yes" : "no");
 #endif
-#ifdef CUSTOMCONTEXT_HYBRISTEXTURE
-    qDebug(" - EGL/Hybris based texture: %s", m_hybrisTexture ? "yes" : "no");
-#endif
 #ifdef CUSTOMCONTEXT_MACTEXTURE
     qDebug(" - mac textures: %s", m_macTexture ? "yes" : "no");
 #endif
@@ -288,6 +280,25 @@ Context::Context(QObject *parent)
 #endif
 
 }
+
+#ifdef CUSTOMCONTEXT_HYBRISTEXTURE
+void Context::renderContextInitialized(QSGRenderContext *ctx)
+{
+    // This check is delayed until there is an EGL display present.
+    m_hybrisTexture = qEnvironmentVariableIsEmpty("CUSTOMCONTEXT_NO_HYBRISTEXTURE");
+    if (m_hybrisTexture && strstr(eglQueryString(eglGetCurrentDisplay(), EGL_EXTENSIONS), "EGL_HYBRIS_native_buffer") == 0) {
+        qDebug() << "EGL_HYBRIS_native_buffer is not available...";
+        m_hybrisTexture = false;
+    }
+#if defined(CUSTOMCONTEXT_DEBUG)
+    qDebug(" - EGL/Hybris based texture: %s", m_hybrisTexture ? "yes" : "no");
+#endif
+
+    QSGContext::renderContextInitialized(ctx);
+}
+#endif
+
+
 
 
 
