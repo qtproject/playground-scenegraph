@@ -39,14 +39,16 @@
 **
 ****************************************************************************/
 
+#include <QtCore/qdebug.h>
+#include <QtCore/QCoreApplication>
+
+#include <QtGui/private/qdrawhelper_p.h>
+
 #include "hybristexture.h"
 
 #include <QtCore/QElapsedTimer>
 #include <QtCore/QThread>
-#include <QtCore/QCoreApplication>
-#include <QtCore/qdebug.h>
 
-#include <QtGui/private/qdrawhelper_p.h>
 
 #include <EGL/egl.h>
 #include <EGL/eglext.h>
