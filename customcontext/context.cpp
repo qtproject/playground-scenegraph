@@ -159,7 +159,7 @@ Context::Context(QObject *parent)
     : QSGContext(parent)
     , m_sampleCount(0)
     , m_useMultisampling(false)
-#ifdef CUSTOMCONTEXT_USE_HYBRISTEXTURE
+#ifdef CUSTOMCONTEXT_HYBRISTEXTURE
     , m_hybrisTexture(false)
 #endif
 {
