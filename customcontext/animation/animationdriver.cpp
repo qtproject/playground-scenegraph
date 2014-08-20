@@ -78,10 +78,14 @@ void AnimationDriver::maybeUpdateDelta()
 
 qint64 AnimationDriver::elapsed() const
 {
-    if (!isRunning() || m_vsyncDelta < 0 || m_timeMode == CurrentTime)
-        return startTime() + m_animationTimer.elapsed();
+    if (!isRunning()) {
+        // This is strictly a bug, but be graceful about it...
+        return 0;
+    }
+    if (m_vsyncDelta < 0 || m_timeMode == CurrentTime)
+        return m_animationTimer.elapsed();
     else
-        return startTime() + m_animationTime;
+        return m_animationTime;
 }
 
 void AnimationDriver::start()
@@ -99,7 +103,7 @@ void AnimationDriver::advance()
 
     if (m_vsyncDelta < 0) {
         m_animationTime = currentTime;
-        QAnimationDriver::advanceAnimation(startTime() + m_animationTime);
+        QAnimationDriver::advanceAnimation(m_animationTime);
         return;
     }
 
@@ -148,11 +152,11 @@ void AnimationDriver::advance()
         m_animationTime = currentTime;
     }
 
-//    printf(" - (%s) advancing by: startTime=%d, animTime=%d, current=%d %s\n",
+//    printf(" - (%s) advancing by: animTime=%d, current=%d %s\n",
 //           m_timeMode == PredictedTime ? "pre" : "cur",
-//           (int) startTime(), (int) m_animationTime, (int) currentTime, badFrame ? "*bad*" : "");
+//           (int) m_animationTime, (int) currentTime, badFrame ? "*bad*" : "");
 
-    QAnimationDriver::advanceAnimation(startTime() + m_animationTime);
+    QAnimationDriver::advanceAnimation(m_animationTime);
 }
 
 }

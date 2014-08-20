@@ -97,9 +97,9 @@ void SwapListeningAnimationDriver::start()
 qint64 SwapListeningAnimationDriver::elapsed() const
 {
     if (!isRunning() || m_stableVsync <= 0)
-        return startTime() + m_timer.elapsed();
+        return m_timer.elapsed();
     else
-        return startTime() + m_currentTime;
+        return m_currentTime;
 }
 
 void SwapListeningAnimationDriver::advance()
@@ -116,5 +116,5 @@ void SwapListeningAnimationDriver::advance()
         m_currentTime = m_timer.elapsed();
     }
 
-    QAnimationDriver::advanceAnimation(startTime() + m_currentTime);
+    QAnimationDriver::advanceAnimation(m_currentTime);
 }
