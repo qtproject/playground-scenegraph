@@ -80,7 +80,7 @@ public:
     QSGRenderer *createRenderer();
 
 #ifdef PROGRAM_BINARY
-    void compile(QSGMaterialShader *shader, QSGMaterial *material, const char *vertex, const char *fragment);
+    void compile(QSGMaterialShader *shader, QSGMaterial *material, const char *vertex = 0, const char *fragment = 0);
 #endif
 
 #ifdef CUSTOMCONTEXT_DITHER
