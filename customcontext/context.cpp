@@ -68,6 +68,10 @@
 #include "renderer/overlaprenderer.h"
 #endif
 
+#ifdef CUSTOMCONTEXT_SIMPLERENDERER
+#include "renderer/simplerenderer.h"
+#endif
+
 #ifdef CUSTOMCONTEXT_MACTEXTURE
 #include "mactexture.h"
 #endif
@@ -497,6 +501,9 @@ QSGRenderer *CONTEXT_CLASS::createRenderer()
         renderer->setClipProgram(m_clipProgram, m_clipMatrixID);
         return renderer;
     }
+#endif
+#ifdef CUSTOMCONTEXT_SIMPLERENDERER
+    return new QSGSimpleRenderer::Renderer(this);
 #endif
     return CONTEXT_CLASS_BASE::createRenderer();
 }

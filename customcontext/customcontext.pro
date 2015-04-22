@@ -163,6 +163,14 @@ overlaprenderer:{
     message("overlaprenderer ..........: no")
 }
 
+simplerenderer:{
+    message("simplerenderer ...........: yes")
+    DEFINES += CUSTOMCONTEXT_SIMPLERENDERER
+    SOURCES += renderer/simplerenderer.cpp
+    HEADERS += renderer/simplerenderer.h renderer/qsgbasicshadermanager_p.h renderer/qsgbasicclipmanager_p.h
+} else {
+    message("simplerenderer ...........: no")
+}
 
 
 ############################################################
