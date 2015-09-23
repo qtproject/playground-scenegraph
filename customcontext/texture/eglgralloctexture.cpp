@@ -54,25 +54,12 @@
 #include <EGL/egl.h>
 #include <EGL/eglext.h>
 
+#include "drawhelper.h"
+
 // Taken from libhybris
 #define container_of(ptr, type, member) ({                  \
     const typeof( ((type *)0)->member ) *__mptr = (ptr);    \
     (type *)( (char *)__mptr - offsetof(type,member) );})
-
-// Taken from qdrawhelper_p.h
-static inline uint PREMUL(uint x) {
-    uint a = x >> 24;
-    uint t = (x & 0xff00ff) * a;
-    t = (t + ((t >> 8) & 0xff00ff) + 0x800080) >> 8;
-    t &= 0xff00ff;
-
-    x = ((x >> 8) & 0xff) * a;
-    x = (x + ((x >> 8) & 0xff) + 0x80);
-    x &= 0xff00;
-    x |= t | (a << 24);
-    return x;
-}
-static inline int qt_div_255(int x) { return (x + (x>>8) + 0x80) >> 8; }
 
 
 #ifndef QSG_NO_RENDER_TIMING

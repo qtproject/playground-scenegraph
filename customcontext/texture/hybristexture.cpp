@@ -42,8 +42,6 @@
 #include <QtCore/qdebug.h>
 #include <QtCore/QCoreApplication>
 
-#include <QtGui/private/qdrawhelper_p.h>
-
 #include "hybristexture.h"
 
 #include <QtCore/QElapsedTimer>
@@ -52,6 +50,8 @@
 
 #include <EGL/egl.h>
 #include <EGL/eglext.h>
+
+#include "drawhelper.h"
 
 #ifndef QSG_NO_RENDER_TIMING
 static bool qsg_render_timing = !qgetenv("QSG_RENDER_TIMING").isEmpty();
@@ -66,6 +66,7 @@ static QElapsedTimer qsg_renderer_timer;
 #define HYBRIS_PIXEL_FORMAT_BGRA_8888   5
 
 #define EGL_NATIVE_BUFFER_HYBRIS             0x3140
+
 
 namespace CustomContext {
 
