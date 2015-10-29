@@ -44,6 +44,7 @@
 
 #include <QtQuick/QSGTexture>
 #include <QtQuick/QQuickTextureFactory>
+#include <QSharedPointer>
 
 #include <QtGui/qopengl.h>
 
@@ -77,7 +78,7 @@ class HybrisTexture : public QSGTexture
 {
     Q_OBJECT
 public:
-    HybrisTexture(NativeBuffer *buffer);
+    HybrisTexture(QSharedPointer<NativeBuffer> buffer);
     ~HybrisTexture();
 
     virtual int textureId() const;
@@ -90,9 +91,8 @@ public:
 
 private:
     mutable GLuint m_id;
-    NativeBuffer *m_buffer;
+    QSharedPointer<NativeBuffer> m_buffer;
     bool m_bound;
-    bool m_ownsBuffer;
 };
 
 class HybrisTextureFactory : public QQuickTextureFactory
@@ -110,7 +110,7 @@ public:
     static HybrisTextureFactory *create(const QImage &image);
 
 private:
-    NativeBuffer *m_buffer;
+    QSharedPointer<NativeBuffer> m_buffer;
 };
 
 }

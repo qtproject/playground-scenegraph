@@ -272,11 +272,10 @@ NativeBuffer *NativeBuffer::create(const QImage &image)
     return buffer;
 }
 
-HybrisTexture::HybrisTexture(NativeBuffer *buffer)
+HybrisTexture::HybrisTexture(QSharedPointer<NativeBuffer> buffer)
     : m_id(0)
     , m_buffer(buffer)
     , m_bound(false)
-    , m_ownsBuffer(false)
 {
     Q_ASSERT(buffer);
 #ifdef CUSTOMCONTEXT_DEBUG
@@ -288,8 +287,6 @@ HybrisTexture::~HybrisTexture()
 {
     if (m_id)
         glDeleteTextures(1, &m_id);
-    if (m_ownsBuffer)
-        delete m_buffer;
 }
 
 void HybrisTexture::bind()
@@ -345,8 +342,7 @@ HybrisTexture *HybrisTexture::create(const QImage &image)
     NativeBuffer *buffer = NativeBuffer::create(image);
     if (!buffer)
         return 0;
-    HybrisTexture *texture = new HybrisTexture(buffer);
-    texture->m_ownsBuffer = true;
+    HybrisTexture *texture = new HybrisTexture(QSharedPointer<NativeBuffer>(buffer));
     return texture;
 }
 
@@ -360,7 +356,6 @@ HybrisTextureFactory::HybrisTextureFactory(NativeBuffer *buffer)
 
 HybrisTextureFactory::~HybrisTextureFactory()
 {
-    delete m_buffer;
 }
 
 QSGTexture *HybrisTextureFactory::createTexture(QQuickWindow *) const
