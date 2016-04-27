@@ -75,8 +75,14 @@ public:
     void initialize(QOpenGLContext *context);
     void invalidate();
     void renderNextFrame(QSGRenderer *renderer, GLuint fbo);
+
+#if QT_VERSION < 0x050600
     QSGTexture *createTexture(const QImage &image) const;
     QSGTexture *createTextureNoAtlas(const QImage &image) const;
+#else
+    QSGTexture *createTexture(const QImage &image, uint flags) const;
+#endif
+
     QSGRenderer *createRenderer();
 
 #ifdef PROGRAM_BINARY

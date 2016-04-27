@@ -51,6 +51,7 @@
 #include <QtQuick/QSGVertexColorMaterial>
 #include <QtQuick/QSGOpaqueTextureMaterial>
 #include <QtQuick/QSGTextureMaterial>
+#include <QtQuick/QQuickWindow>
 #include <private/qsgdefaultimagenode_p.h>
 #include <private/qsgdefaultrectanglenode_p.h>
 #include <private/qsgdistancefieldglyphnode_p_p.h>
@@ -436,7 +437,56 @@ QSurfaceFormat Context::defaultSurfaceFormat() const
 }
 #endif
 
+#if QT_VERSION >= 0x050600
+QSGTexture *CONTEXT_CLASS::createTexture(const QImage &image, uint flags) const
+{
+    if (flags & QQuickWindow::TextureCanUseAtlas) {
+#ifdef CUSTOMCONTEXT_ATLASTEXTURE
+        if (m_atlasTexture && atlas) {
+            QSGTexture *t = const_cast<Context *>(this)->m_atlasManager.create(image);
+            if (t)
+                return t;
+        }
+#endif
+    } else {
+#ifdef CUSTOMCONTEXT_EGLGRALLOCTEXTURE
+    if (static_cast<Context *>(sceneGraphContext())->hasEglGrallocTextures()) {
 
+        // Only use gralloc textures for textures created outside the render thread.
+        // They can still block for as long as normal texture, so better to not waste
+        // the precious resource.
+        if (openglContext() != 0 && openglContext()->thread() != QThread::currentThread()) {
+            EglGrallocTexture *t = EglGrallocTexture::create(image);
+            if (t)
+                return t;
+        }
+    }
+#endif
+#ifdef CUSTOMCONTEXT_HYBRISTEXTURE
+    if (static_cast<Context *>(sceneGraphContext())->hasHybrisTextures()) {
+
+        // Only use hybris textures for textures created outside the render thread.
+        // They can still block for as long as normal texture, so better to not waste
+        // the precious resource.
+        if (openglContext() != 0 && openglContext()->thread() != QThread::currentThread()) {
+            HybrisTexture *t = HybrisTexture::create(image);
+            if (t)
+                return t;
+        }
+    }
+#endif
+    }
+
+#ifdef CUSTOMCONTEXT_MACTEXTURE
+    if (m_macTexture)
+        return new MacTexture(image);
+#endif
+
+
+    return CONTEXT_CLASS_BASE::createTexture(image, flags);
+}
+
+#else
 
 QSGTexture *CONTEXT_CLASS::createTexture(const QImage &image) const
 {
@@ -488,8 +538,12 @@ QSGTexture *RenderContext::createTextureNoAtlas(const QImage &image) const
 
     return CONTEXT_CLASS_BASE::createTextureNoAtlas(image);
 }
+
+// Qt 5.2 branch
 #endif
 
+// Qt 5.6 branch
+#endif
 
 
 QSGRenderer *CONTEXT_CLASS::createRenderer()
