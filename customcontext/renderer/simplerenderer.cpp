@@ -434,6 +434,7 @@ void Renderer::renderElements()
         }
     }
 
+    m_clipManager->reset(this);
     m_shaderManager->endFrame(this);
 }
 
