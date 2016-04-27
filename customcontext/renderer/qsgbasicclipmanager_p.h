@@ -184,8 +184,14 @@ void QSGBasicClipManager::activate(const QSGClipNode *clip,
                     m_program = new QOpenGLShaderProgram();
                     QSGShaderSourceBuilder::initializeProgramFromFiles(
                         m_program,
+#if QT_VERSION >= 0x050600
+                        QStringLiteral(":/qt-project.org/scenegraph/shaders/stencilclip.vert"),
+                        QStringLiteral(":/qt-project.org/scenegraph/shaders/stencilclip.frag")
+#else
                         QStringLiteral(":/scenegraph/shaders/stencilclip.vert"),
-                        QStringLiteral(":/scenegraph/shaders/stencilclip.frag"));
+                        QStringLiteral(":/scenegraph/shaders/stencilclip.frag")
+#endif
+                        );
                     m_program->bindAttributeLocation("vCoord", 0);
                     m_program->link();
                     m_clipMatrixId = m_program->uniformLocation("matrix");
