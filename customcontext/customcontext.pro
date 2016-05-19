@@ -84,7 +84,7 @@ eglgralloctexture:{
     HEADERS += texture/eglgralloctexture.h
 
     INCLUDEPATH += texture $(ANDROID_SDK_INCLUDE) $(ANDROID_SDK_INCLUDE)/android
-    LIBS += -lhardware
+    LIBS += -lhardware -lEGL
 
 } else {
     message("eglgralloctexure .........: no")
@@ -96,6 +96,7 @@ hybristexture :{
     SOURCES += texture/hybristexture.cpp
     HEADERS += texture/hybristexture.h
     INCLUDEPATH += texture
+    LIBS += -lEGL
 
 } else {
     message("hybristexture ............: no")
@@ -204,6 +205,7 @@ simplerenderer:{
         message("programbinary ............: yes")
         DEFINES += PROGRAM_BINARY
         SOURCES += programbinary.cpp
+        LIBS += -lEGL
     } else {
         message("programbinary ............: no")
     }
