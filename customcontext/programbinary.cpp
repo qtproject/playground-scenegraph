@@ -71,12 +71,15 @@
  */
 
 #define GL_PROGRAM_BINARY_LENGTH 0x8741
+
+#ifndef QT_OPENGL_ES_3
 extern "C" {
     typedef void (* _glGetProgramBinary)(GLuint program, GLsizei bufSize, GLsizei *length, GLenum *binaryFormat, void *binary);
     typedef void (* _glProgramBinary)(GLuint program, GLenum binaryFormat, const void *binary, GLint length);
 }
 static _glGetProgramBinary glGetProgramBinary;
 static _glProgramBinary glProgramBinary;
+#endif
 
 namespace CustomContext {
 
@@ -131,10 +134,12 @@ public:
         qDebug() << "Customcontext: binary shaders stored in:" << m_location;
 #endif
 
+#ifndef QT_OPENGL_ES_3
         glGetProgramBinary = (_glGetProgramBinary) eglGetProcAddress("glGetProgramBinaryOES");
         glProgramBinary = (_glProgramBinary) eglGetProcAddress("glProgramBinaryOES");
 
         Q_ASSERT(glGetProgramBinary && glProgramBinary);
+#endif
     }
 
     static ProgramBinaryStore *self() {
