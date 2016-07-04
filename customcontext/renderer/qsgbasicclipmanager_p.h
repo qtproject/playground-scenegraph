@@ -38,6 +38,7 @@
 #include <private/qsgshadersourcebuilder_p.h>
 
 #include <QOpenGLShaderProgram>
+#include <QOpenGLFunctions>
 
 class QSGBasicClipManager : public QObject
 {

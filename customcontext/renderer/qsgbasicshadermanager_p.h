@@ -35,9 +35,17 @@
 #define QSGBASICSHADERMANAGER_P_H
 
 #include <qsgmaterial.h>
+#include <QtGui/qopenglfunctions.h>
 
+#if QT_VERSION >= 0x050800
+#include <private/qsgdefaultcontext_p.h>
+#include <private/qsgdefaultrendercontext_p.h>
+#else
 #include <private/qsgcontext_p.h>
+#endif
 #include <private/qsgrenderer_p.h>
+
+class QSGDefaultRenderContext;
 
 class QSGBasicShaderManager : public QObject
 {
@@ -45,7 +53,11 @@ class QSGBasicShaderManager : public QObject
 public:
     QSGBasicShaderManager(QSGRenderContext *context)
         : QObject(context)
+#if QT_VERSION >= 0x050800
+        , m_context(static_cast<QSGDefaultRenderContext *>(context))
+#else
         , m_context(context)
+#endif
         , m_currentShader(0)
         , m_currentMaterial(0)
         , m_previousMaterial(0)
@@ -75,8 +87,13 @@ public:
             return shader;
 
         shader = static_cast<QSGMaterialShader *>(material->createShader());
+#if QT_VERSION >= 0x050800
+        m_context->compileShader(shader, const_cast<QSGMaterial *>(material));
+        m_context->initializeShader(shader);
+#else
         m_context->compile(shader, const_cast<QSGMaterial *>(material));
         m_context->initialize(shader);
+#endif
 
         m_shaders[type] = shader;
 
@@ -159,7 +176,12 @@ public Q_SLOTS:
 
 private:
     QHash<QSGMaterialType *, QSGMaterialShader *> m_shaders;
+
+#if QT_VERSION >= 0x050800
+    QSGDefaultRenderContext *m_context;
+#else
     QSGRenderContext *m_context;
+#endif
 
     QSGMaterialShader *m_currentShader;
     const QSGMaterial *m_currentMaterial;

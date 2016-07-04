@@ -43,9 +43,14 @@
 #ifndef CONTEXT_H
 #define CONTEXT_H
 
-#include <private/qsgcontext_p.h>
 #include <QtCore/QElapsedTimer>
 #include <QtGui/QOpenGLShaderProgram>
+#if QT_VERSION >= 0x050800
+#include <private/qsgdefaultcontext_p.h>
+#include <private/qsgdefaultrendercontext_p.h>
+#else
+#include <private/qsgcontext_p.h>
+#endif
 
 #ifdef CUSTOMCONTEXT_DITHER
 #include "renderhooks/ordereddither2x2.h"
@@ -68,7 +73,11 @@ namespace CustomContext
 {
 
 #if QT_VERSION >= 0x050200
+#if QT_VERSION >= 0x050800
+class RenderContext : public QSGDefaultRenderContext
+#else
 class RenderContext : public QSGRenderContext
+#endif
 {
 public:
     RenderContext(QSGContext *ctx);
@@ -110,7 +119,11 @@ public:
 };
 #endif
 
+#if QT_VERSION >= 0x050800
+class Context : public QSGDefaultContext
+#else
 class Context : public QSGContext
+#endif
 {
     Q_OBJECT
 public:

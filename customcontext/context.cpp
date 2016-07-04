@@ -94,7 +94,10 @@
 #include <private/qsgdefaultrectanglenode_p.h>
 #endif
 
-#if QT_VERSION >= 0x050200
+#if QT_VERSION >= 0x050800
+#define CONTEXT_CLASS RenderContext
+#define CONTEXT_CLASS_BASE QSGDefaultRenderContext
+#elif QT_VERSION >= 0x050200
 #define CONTEXT_CLASS RenderContext
 #define CONTEXT_CLASS_BASE QSGRenderContext
 #else
@@ -113,7 +116,11 @@ namespace CustomContext
 
 #if QT_VERSION >= 0x050200
 RenderContext::RenderContext(QSGContext *ctx)
+#if QT_VERSION >= 0x050800
+    : QSGDefaultRenderContext(ctx)
+#else
     : QSGRenderContext(ctx)
+#endif
 {
 #ifdef CUSTOMCONTEXT_DITHER
     m_dither = qgetenv("CUSTOMCONTEXT_NO_DITHER").isEmpty();
@@ -161,7 +168,11 @@ QSGMaterialShader *RenderContext::prepareMaterial(QSGMaterial *material)
 #endif  //QT_VERSION >= 0x050200
 
 Context::Context(QObject *parent)
+#if QT_VERSION >= 0x050800
+    : QSGDefaultContext(parent)
+#else
     : QSGContext(parent)
+#endif
     , m_sampleCount(0)
     , m_useMultisampling(false)
 #ifdef CUSTOMCONTEXT_HYBRISTEXTURE
