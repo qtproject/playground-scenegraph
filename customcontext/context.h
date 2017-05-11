@@ -95,7 +95,11 @@ public:
     QSGRenderer *createRenderer();
 
 #ifdef PROGRAM_BINARY
+#if QT_VERSION >= 0x050800
+    void compileShader(QSGMaterialShader *shader, QSGMaterial *material, const char *vertex = 0, const char *fragment = 0);
+#else
     void compile(QSGMaterialShader *shader, QSGMaterial *material, const char *vertex = 0, const char *fragment = 0);
+#endif
 #endif
 
 #ifdef CUSTOMCONTEXT_DITHER

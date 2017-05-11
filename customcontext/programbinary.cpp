@@ -155,8 +155,11 @@ public:
     void purge(const QByteArray &key);
 
     void sanityCheck();
-
+#if QT_VERSION >= 0x050800
+    void compileAndInsert(QSGDefaultRenderContext *rc, const QByteArray &key, QSGMaterialShader *s, QSGMaterial *m, const char *v, const char *f);
+#else
     void compileAndInsert(QSGRenderContext *rc, const QByteArray &key, QSGMaterialShader *s, QSGMaterial *m, const char *v, const char *f);
+#endif
 
 private:
     QCryptographicHash m_hash;
@@ -231,11 +234,18 @@ void ProgramBinaryStore::purge(const QByteArray &key)
     if (file.exists())
         file.remove();
 }
-
+#if QT_VERSION >= 0x050800
+void ProgramBinaryStore::compileAndInsert(QSGDefaultRenderContext *rc, const QByteArray &key, QSGMaterialShader *s, QSGMaterial *m, const char *v, const char *f)
+#else
 void ProgramBinaryStore::compileAndInsert(QSGRenderContext *rc, const QByteArray &key, QSGMaterialShader *s, QSGMaterial *m, const char *v, const char *f)
+#endif
 {
     // Use the baseclass impl to do the actual compilation
+#if QT_VERSION >= 0x050800
+    rc->QSGDefaultRenderContext::compileShader(s, m, v, f);
+#else
     rc->QSGRenderContext::compile(s, m, v, f);
+#endif
     QOpenGLShaderProgram *p = s->program();
     if (p->isLinked()) {
         ProgramBinary *b = new ProgramBinary;
@@ -257,13 +267,21 @@ void ProgramBinaryStore::compileAndInsert(QSGRenderContext *rc, const QByteArray
     }
 }
 
+#if QT_VERSION >= 0x050800
+void RenderContext::compileShader(QSGMaterialShader *shader, QSGMaterial *material, const char *vertex, const char *fragment)
+#else
 void RenderContext::compile(QSGMaterialShader *shader, QSGMaterial *material, const char *vertex, const char *fragment)
+#endif
 {
     Q_ASSERT(QOpenGLContext::currentContext()->extensions().contains("GL_OES_get_program_binary"));
 
     // We cannot cache shaders which have custom compilation
     if (material->flags() & QSGMaterial::CustomCompileStep) {
+#if QT_VERSION >= 0x050800
+        QSGDefaultRenderContext::compileShader(shader, material, vertex, fragment);
+#else
         QSGRenderContext::compile(shader, material, vertex, fragment);
+#endif
         return;
     }
 
