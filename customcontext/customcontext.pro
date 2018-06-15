@@ -3,7 +3,7 @@ TARGET=customcontext
 
 CONFIG += plugin
 
-contains(QT_VERSION, ^5\\.[2-9]\\..*) {
+equals(QT_MAJOR_VERSION, 5):greaterThan(QT_MINOR_VERSION, 1) {
     message("Using Qt 5.2 or later")
     CONFIG += customcontext_qt520
 }
